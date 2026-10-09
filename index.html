@@ -1,1 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ashto Paghadi</title>
 
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 12px;
+  font-family: Arial, sans-serif;
+  color: #38271d;
+  background: linear-gradient(135deg, #f8e8c9, #e4c99e);
+}
+
+header {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+h1 {
+  margin: 5px;
+  font-size: 29px;
+}
+
+.subtitle {
+  font-size: 13px;
+}
+
+main {
+  max-width: 600px;
+  margin: auto;
+}
+
+.panel {
+  background: #fffaf0;
+  border: 1px solid #d2b991;
+  border-radius: 13px;
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 3px 10px #5b35151a;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+button, select {
+  font-size: 14px;
+  padding: 9px 11px;
+  border: 1px solid #bba17a;
+  border-radius: 8px;
+  background: white;
+  color: #38271d;
+}
+
+button {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button.primary {
+  background: #803e2b;
+  color: white;
+}
+
+button:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+#status {
+  font-weight: bold;
+  line-height: 1.5;
+  margin-top: 12px;
+}
+
+#result {
+  font-size: 22px;
+  font-weight: bold;
+  color: #9a3f2d;
+  margin-top: 5px;
+}
+
+#board {
+  width: 100%;
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  padding: 5px;
+  background: #92714d;
+  border-radius: 12px;
+}
+
+.cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-content: center;
+  flex-wrap: wrap;
+  background: #fff8e9;
+  border: 1px solid #d6c09d;
+  border-radius: 5px;
+}
+
+.cell.safe {
+  background: #dff0d5;
+  border: 2px solid #639458;
+}
+
+.cell.safe::after {
+  content: "×";
+  position: absolute;
+  top: 0;
+  right: 4px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #367a38;
+}
+
+.cell.center {
+  background: #f6dfa0;
+  border: 2px solid #b68a32;
+}
+
+.number {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: clamp(9px, 2.6vw, 13px);
+  font-weight: bold;
+  opacity: .8;
+}
+
+.piece {
+  width: clamp(17px, 5vw, 27px);
+  height: clamp(17px, 5vw, 27px);
+  padding: 0;
+  margin: 1px;
+  border: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  box-shadow: 0 2px 3px #0004;
+}
+
+.p0 { background: #b83c36; }
+.p1 { background: #286ca9; }
+.p2 { background: #39834e; }
+.p3 { background: #884b9e; }
+
+.piece.legal {
+  outline: 3px solid #f5b928;
+  outline-offset: 1px;
+}
+
+#home {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+#players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.badge {
+  background: white;
+  border: 1px solid #dec9a8;
+  padding: 6px 8px;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+#routeChoice {
+  display: none;
+  margin-top: 12px;
+}
+
+#log {
+  max-height: 130px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.note {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 380px) {
+  body { padding: 6px; }
+  .panel { padding: 8px; }
+  #board { gap: 3px; padding: 3px; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>અષ્ટોપઘડી</h1>
+  <div class="subtitle">ASHTO PAGHADI · CHAUKA BHARA · ISHTO</div>
+</header>
+
+<main>
+
+  <section class="panel">
+    <div class="controls">
+      <label for="playerCount">Players:</label>
+
+      <select id="playerCount">
+        <option value="2">2 Players</option>
+        <option value="3">3 Players</option>
+        <option value="4" selected>4 Players</option>
+      </select>
+
+      <button id="newGame" class="primary">New Game</button>
+      <button id="toss" class="primary">Toss Cowries</button>
+    </div>
+
+    <div id="status" aria-live="polite">
+      Player 1's turn. Toss the cowries.
+    </div>
+
+    <div id="result" aria-live="polite"></div>
+
+    <div class="note">
+      0 open = 8 (ASHTO) · 1 = 1 · 2 = 2 ·
+      3 = 3 · 4 = 4 (CHOKKO)
+    </div>
+
+    <div id="home"></div>
+  </section>
+
+  <section class="panel">
+    <div id="board"></div>
+    <div id="players"></div>
+
+    <div id="routeChoice" class="panel">
+      <strong>Choose your route:</strong>
+      <div class="controls" style="margin-top:8px">
+        <button id="outer">16A — Outer</button>
+        <button id="inner">16B — Inner</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <strong>Game Log</strong>
+    <div id="log"></div>
+  </section>
+
+  <section class="panel note">
+    This is a local prototype. The board layout and safe houses
+    follow your sketch. Online multiplayer and some advanced
+    movement and capture rules still need to be implemented.
+  </section>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+
+  // Board positions copied from your 5 x 5 sketch.
+  const layout = [
+    [10,  9,  8,  7,  6],
+    [11, 18, 19, 20,  5],
+    [12, 17, 24, 21,  4],
+    [13, "16B", 23, 22, 3],
+    [14, 15, "16A", 1, 2]
+  ];
+
+  // All five houses marked X in your sketch.
+  const safeHouses = new Set([
+    "4", "8", "12", "16A", "24"
+  ]);
+
+  const colors = [
+    "#b83c36", "#286ca9", "#39834e", "#884b9e"
+  ];
+
+  const symbols = ["●", "◆", "▲", "★"];
+
+  let players = [];
+  let current = 0;
+  let roll = null;
+  let moves = [];
+  let finished = false;
+  let pendingRoute = null;
+
+  function writeLog(message) {
+    const line = document.createElement("div");
+    line.textContent = message;
+    $("log").prepend(line);
+  }
+
+  function createPlayer(id) {
+    return {
+      id: id,
+      start: 1 + id * 4,
+      tod: false,
+      finished: false,
+      pieces: Array.from({ length: 4 }, (_, i) => ({
+        id: i,
+        pos: null,
+        route: "outer",
+        done: false
+      }))
+    };
+  }
+
+  function isSafe(pos) {
+    return safeHouses.has(String(pos));
+  }
+
+  function outerRoute(player) {
+    const route = [];
+
+    for (let i = 0; i < 16; i++) {
+      const n = ((player.start - 1 + i) % 16) + 1;
+      route.push(n === 16 ? "16A" : n);
+    }
+
+    return route;
+  }
+
+  function innerRoute(player) {
+    // The reference inner path. Player-specific rotation is
+    // a remaining refinement for the full game.
+    return ["16B", 17, 18, 19, 20, 21, 22, 23, 24];
+  }
+
+  function getRoute(player, route) {
+    return route === "inner"
+      ? innerRoute(player)
+      : outerRoute(player);
+  }
+
+  function advance(player, pos, routeName, steps) {
+    const route = getRoute(player, routeName);
+
+    const index = route.findIndex(
+      n => String(n) === String(pos)
+    );
+
+    if (index < 0) return null;
+
+    const next = index + steps;
+
+    if (routeName === "inner") {
+      return next < route.length ? route[next] : null;
+    }
+
+    return route[next % route.length];
+  }
+
+  function getCell(pos) {
+    return document.querySelector(
+      '.cell[data-pos="' + String(pos) + '"]'
+    );
+  }
+
+  function piecesAt(pos) {
+    const result = [];
+
+    players.forEach(player => {
+      player.pieces.forEach(piece => {
+        if (
+          !piece.done &&
+          piece.pos !== null &&
+          String(piece.pos) === String(pos)
+        ) {
+          result.push({ player, piece });
+        }
+      });
+    });
+
+    return result;
+  }
+
+  function drawBoard() {
+    const board = $("board");
+    board.innerHTML = "";
+
+    layout.flat().forEach(pos => {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.pos = String(pos);
+
+      if (isSafe(pos)) cell.classList.add("safe");
+      if (String(pos) === "24") cell.classList.add("center");
+
+      const number = document.createElement("span");
+      number.className = "number";
+      number.textContent = pos;
+      cell.appendChild(number);
+
+      board.appendChild(cell);
+    });
+  }
+
+  function render() {
+    drawBoard();
+
+    players.forEach(player => {
+      player.pieces.forEach(piece => {
+        if (piece.done || piece.pos === null) return;
+
+        const cell = getCell(piece.pos);
+        if (!cell) return;
+
+        const button = document.createElement("button");
+        button.className = "piece p" + player.id;
+        button.textContent = symbols[player.id];
+        button.title =
+          "Player " + (player.id + 1) +
+          ", cowrie " + (piece.id + 1);
+
+        const legal = moves.some(move =>
+          move.player === player.id &&
+          move.ids.includes(piece.id)
+        );
+
+        if (player.id === current && legal) {
+          button.classList.add("legal");
+        }
+
+        button.addEventListener("click", () => {
+          selectPiece(player.id, piece.id);
+        });
+
+        cell.appendChild(button);
+      });
+    });
+
+    renderPlayers();
+    renderHome();
+  }
+
+  function renderPlayers() {
+    const box = $("players");
+    box.innerHTML = "";
+
+    players.forEach(player => {
+      const badge = document.createElement("div");
+      badge.className = "badge";
+
+      const completed = player.pieces.filter(
+        piece => piece.done
+      ).length;
+
+      badge.innerHTML =
+        '<strong style="color:' + colors[player.id] + '">' +
+        "Player " + (player.id + 1) + "</strong> · " +
+        completed + "/4 completed" +
+        (player.tod ? " · Tod Malyo" : "");
+
+      box.appendChild(badge);
+    });
+  }
+
+  function renderHome() {
+    const box = $("home");
+    box.innerHTML = "";
+
+    if (!players.length) return;
+
+    const player = players[current];
+
+    const homePieces = player.pieces.filter(
+      piece => piece.pos === null && !piece.done
+    );
+
+    if (!homePieces.length) return;
+
+    const label = document.createElement("span");
+    label.textContent = "Player " + (current + 1) + " home:";
+    box.appendChild(label);
+
+    homePieces.forEach(piece => {
+      const button = document.createElement("button");
+      button.textContent = symbols[current] + " " + (piece.id + 1);
+      button.style.background = colors[current];
+      button.style.color = "white";
+
+      const available = moves.some(move =>
+        move.type === "home" && move.ids.includes(piece.id)
+      );
+
+      button.disabled = !available;
+
+      button.addEventListener("click", () => {
+        const move = moves.find(candidate =>
+          candidate.type === "home" &&
+          candidate.ids.includes(piece.id)
+        );
+
+        if (move) performMove(move);
+      });
+
+      box.appendChild(button);
+    });
+  }
+
+  function findMoves() {
+    if (roll === null || finished) return [];
+
+    const player = players[current];
+    const result = [];
+
+    const home = player.pieces.filter(
+      piece => piece.pos === null && !piece.done
+    );
+
+    // Bhagwan-na: home entry does not require a 4 or an 8.
+    if (home.length) {
+      const count = Math.min(
+        roll === 8 ? 4 : roll,
+        home.length
+      );
+
+      result.push({
+        type: "home",
+        player: current,
+        ids: home.slice(0, count).map(p => p.id),
+        to: player.start,
+        route: "outer",
+        steps: 1
+      });
+
+      // Offer single-cowrie entry as an alternative.
+      if (count > 1) {
+        result.push({
+          type: "home",
+          player: current,
+          ids: [home[0].id],
+          to: player.start,
+          route: "outer",
+          steps: 1
+        });
+      }
+    }
+
+    // Group cowries sharing the same cell.
+    const visited = new Set();
+
+    player.pieces.forEach(piece => {
+      if (piece.done || piece.pos === null) return;
+
+      const positionKey = String(piece.pos);
+      if (visited.has(positionKey)) return;
+      visited.add(positionKey);
+
+      const group = player.pieces.filter(other =>
+        !other.done &&
+        other.pos !== null &&
+        String(other.pos) === positionKey
+      );
+
+      const size = group.length;
+
+      if (size > 1 && roll % size !== 0) return;
+
+      const steps = size > 1 ? roll / size : roll;
+
+      if (positionKey === "16A" && player.tod) {
+        result.push({
+          type: "route",
+          player: current,
+          ids: group.map(p => p.id),
+          from: piece.pos,
+          route: "outer",
+          steps: steps
+        });
+
+        result.push({
+          type: "route",
+          player: current,
+          ids: group.map(p => p.id),
+          from: piece.pos,
+          route: "inner",
+          steps: steps
+        });
+
+        return;
+      }
+
+      const route = piece.route || "outer";
+
+      result.push({
+        type: "move",
+        player: current,
+        ids: group.map(p => p.id),
+        from: piece.pos,
+        to: advance(player, piece.pos, route, steps),
+        route: route,
+        steps: steps
+      });
+    });
+
+    return result.filter(move =>
+      move.type === "route" || move.to !== null
+    );
+  }
+
+  function tossCowries() {
+    if (finished || roll !== null) return;
+
+    const open = Math.floor(Math.random() * 5);
+    roll = open === 0 ? 8 : open;
+
+    let label = String(roll);
+
+    if (roll === 8) label = "અષ્ટો! · ASHTO!";
+    if (roll === 4) label = "ચોક્કો! · CHOKKO!";
+
+    $("result").textContent =
+      label + " (" + open + " open cowries)";
+
+    writeLog("Player " + (current + 1) + " rolled " + roll + ".");
+
+    if (roll === 8) writeLog("અષ્ટો! ASHTO!");
+    if (roll === 4) writeLog("ચોક્કો! CHOKKO!");
+
+    $("toss").disabled = true;
+
+    moves = findMoves();
+    render();
+
+    if (!moves.length) {
+      $("status").textContent = "No legal move. Turn passes.";
+      writeLog("Player " + (current + 1) + " has no legal move.");
+
+      setTimeout(nextTurn, 800);
+    } else {
+      $("status").textContent =
+        "Player " + (current + 1) + " rolled " + roll +
+        ". Tap a highlighted cowrie or home cowrie.";
+    }
+  }
+
+  function selectPiece(playerId, pieceId) {
+    if (playerId !== current || roll === null) return;
+
+    const move = moves.find(candidate =>
+      candidate.player === playerId &&
+      candidate.ids.includes(pieceId) &&
+      candidate.type !== "home"
+    );
+
+    if (!move) return;
+
+    if (move.type === "route") {
+      pendingRoute = move;
+      $("routeChoice").style.display = "block";
+      $("status").textContent = "Choose the 16A or 16B route.";
+      return;
+    }
+
+    performMove(move);
+  }
+
+  function chooseRoute(routeName) {
+    if (!pendingRoute) return;
+
+    const move = pendingRoute;
+    const player = players[current];
+
+    const destination = advance(
+      player,
+      routeName === "inner" ? "16B" : "16A",
+      routeName,
+      move.steps
+    );
+
+    $("routeChoice").style.display = "none";
+    pendingRoute = null;
+
+    if (destination === null) {
+      $("status").textContent = "That move cannot finish on this route.";
+      return;
+    }
+
+    performMove({
+      ...move,
+      type: "move",
+      to: destination,
+      route: routeName
+    });
+  }
+
+  function performMove(move) {
+    const player = players[current];
+
+    const group = player.pieces.filter(piece =>
+      move.ids.includes(piece.id) && !piece.done
+    );
+
+    group.forEach(piece => {
+      piece.pos = move.to;
+      piece.route = move.route || "outer";
+    });
+
+    let captured = false;
+
+    // Basic single-versus-single capture on non-safe houses.
+    if (!isSafe(move.to) && group.length === 1) {
+      const enemies = piecesAt(move.to).filter(
+        item => item.player.id !== current
+      );
+
+      if (enemies.length === 1) {
+        const victim = enemies[0];
+
+        victim.piece.pos = null;
+        victim.piece.route = "outer";
+        captured = true;
+
+        writeLog(
+          "Player " + (current + 1) +
+          " captured Player " + (victim.player.id + 1) + "'s cowrie!"
+        );
+
+        if (!player.tod) {
+          player.tod = true;
+          writeLog(
+            "Player " + (current + 1) +
+            ": તોડ મળ્યો — TOD MALYO!"
+          );
+        }
+
+        if (
+          victim.player.pieces.every(
+            piece => piece.pos === null || piece.done
+          ) &&
+          victim.player.tod
+        ) {
+          victim.player.tod = false;
+
+          writeLog(
+            "Player " + (victim.player.id + 1) +
+            ": નતોડ થયા — NATOD THAYA!"
+          );
+        }
+      }
+    }
+
+    // Reaching the centre completes the cowrie.
+    if (String(move.to) === "24") {
+      group.forEach(piece => {
+        piece.done = true;
+        piece.pos = null;
+      });
+
+      writeLog("Player " + (current + 1) + " reached the centre!");
+    }
+
+    const completed = player.pieces.filter(
+      piece => piece.done
+    ).length;
+
+    if (completed === 4) {
+      player.finished = true;
+      finished = true;
+
+      $("status").textContent =
+        "🏆 THE WINNER! Player " + (current + 1) +
+        " — all 4 cowries reached the centre!";
+
+      writeLog(
+        "🏆 THE WINNER! Player " + (current + 1) +
+        " — all 4 cowries reached the centre!"
+      );
+
+      $("routeChoice").style.display = "none";
+      render();
+      $("toss").disabled = true;
+      return;
+    }
+
+    const extra =
+      captured ||
+      roll === 4 ||
+      roll === 8 ||
+      String(move.to) === "24";
+
+    let reason = "";
+
+    if (captured) reason = "capture";
+    else if (roll === 8) reason = "Ashto";
+    else if (roll === 4) reason = "Chokko";
+    else if (String(move.to) === "24") reason = "reaching 24";
+
+    $("routeChoice").style.display = "none";
+    pendingRoute = null;
+
+    render();
+
+    if (extra) {
+      $("status").textContent =
+        "Player " + (current + 1) +
+        " gets an extra turn" +
+        (reason ? " — " + reason : "") + ".";
+
+      writeLog(
+        "Player " + (current + 1) +
+        " gets an extra turn" +
+        (reason ? " — " + reason : "") + "."
+      );
+
+      roll = null;
+      moves = [];
+
+      $("result").textContent = "";
+      $("toss").disabled = false;
+      render();
+    } else {
+      nextTurn();
+    }
+  }
+
+  function nextTurn() {
+    roll = null;
+    moves = [];
+    pendingRoute = null;
+
+    $("result").textContent = "";
+    $("toss").disabled = false;
+    $("routeChoice").style.display = "none";
+
+    let attempts = 0;
+
+    do {
+      current = (current + 1) % players.length;
+      attempts++;
+    } while (
+      players[current].finished &&
+      attempts <= players.length
+    );
+
+    if (players[current].finished) {
+      finished = true;
+      $("status").textContent = "Game complete.";
+      $("toss").disabled = true;
+      return;
+    }
+
+    $("status").textContent =
+      "Player " + (current + 1) + "'s turn. Toss the cowries.";
+
+    render();
+  }
+
+  function newGame() {
+    players = Array.from(
+      { length: Number($("playerCount").value) },
+      (_, i) => createPlayer(i)
+    );
+
+    current = 0;
+    roll = null;
+    moves = [];
+    pendingRoute = null;
+    finished = false;
+
+    $("log").innerHTML = "";
+    $("result").textContent = "";
+    $("routeChoice").style.display = "none";
+    $("toss").disabled = false;
+
+    $("status").textContent =
+      "Player 1's turn. Toss the cowries.";
+
+    writeLog(
+      "New game started. Initial entry is Bhagwan-na."
+    );
+
+    render();
+  }
+
+  $("newGame").addEventListener("click", newGame);
+  $("playerCount").addEventListener("change", newGame);
+  $("toss").addEventListener("click", tossCowries);
+
+  $("outer").addEventListener("click", () => {
+    chooseRoute("outer");
+  });
+
+  $("inner").addEventListener("click", () => {
+    chooseRoute("inner");
+  });
+
+  // Start the game after the page loads.
+  newGame();
+
+})();
+</script>
+
+</body>
+  </html>
