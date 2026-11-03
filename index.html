@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ashto Paghadi</title>
+
+<style>
+:root { --c0:#b83c36; --c1:#286ca9; --c2:#39834e; --c3:#884b9e; }
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 12px;
+  font-family: Arial, sans-serif;
+  color: #38271d;
+  background: linear-gradient(135deg, #f8e8c9, #e4c99e);
+}
+header { text-align: center; margin-bottom: 8px; }
+h1 { margin: 2px; font-size: 24px; }
+.subtitle { font-size: 12px; }
+main { max-width: 600px; margin: auto; }
+
+.panel {
+  background: #fffaf0;
+  border: 1px solid #d2b991;
+  border-radius: 13px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 3px 10px #5b35151a;
+}
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+button, select {
+  font-size: 14px; padding: 9px 11px;
+  border: 1px solid #bba17a; border-radius: 8px;
+  background: white; color: #38271d;
+}
+button { cursor: pointer; font-weight: bold; }
+button.primary { background: #803e2b; color: white; }
+button:disabled { opacity: .4; cursor: default; }
+
+#status { font-weight: bold; line-height: 1.4; min-height: 2.8em; }
+#hint { margin: 2px 0 6px; min-height: 1.5em; color: #6b4a2b; }
+.note { font-size: 12px; line-height: 1.5; }
+
+/* ---------- toss display ---------- */
+#tossRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#tossCowries { display: flex; gap: 6px; }
+.tc { width: 24px; height: 32px; border-radius: 50%; position: relative; }
+.tc.closed {
+  background: radial-gradient(ellipse at 38% 30%, #d6aa72, #8a5a2b);
+  box-shadow: inset 0 -4px 6px #0003, 0 2px 3px #0004;
+}
+.tc.closed::after { content:""; position:absolute; inset:32% 30%; border-radius:50%; background:#0002; }
+.tc.open {
+  background: radial-gradient(ellipse at 38% 30%, #fffdf5, #ecd7a4);
+  box-shadow: inset 0 -4px 6px #0003, 0 2px 3px #0004;
+}
+.tc.open::after { content:""; position:absolute; left:46%; top:13%; bottom:13%; width:9%; background:#6b4423; border-radius:6px; }
+#tossResult { font-size: 16px; font-weight: bold; color: #9a3f2d; line-height: 1.2; min-width: 70px; }
+#toss { flex: 1; min-width: 130px; font-size: 16px; padding: 12px; }
+
+/* ---------- board ---------- */
+#boardWrap {
+  position: relative; width: 100%; aspect-ratio: 1 / 1; margin: 0 auto;
+  background: #92714d; border-radius: 12px; padding: 6px;
+  overflow: hidden; touch-action: manipulation; user-select: none;
+}
+/* keep the board and the toss bar on one screen, even on short viewports */
+@supports (width: min(1px, 2px)) { #boardWrap { width: min(100%, max(280px, calc(100vh - 340px))); } }
+@supports (height: 100dvh) { #boardWrap { width: min(100%, max(280px, calc(100dvh - 340px))); } }
+.boardPanel { padding: 8px; }
+#board, #pieceLayer, #fx { position: absolute; left: 6px; top: 6px; right: 6px; bottom: 6px; }
+#board { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr); }
+#pieceLayer, #fx { pointer-events: none; }
+
+.cell { position: relative; background: #fff8e9; border: 1px solid #c9ae83; }
+.cell.safe { background: #e3f1d9; }
+.cell.safe::before {
+  content: ""; position: absolute; inset: 8%; opacity: .6;
+  background:
+    linear-gradient(45deg,  transparent 46%, #5f9a58 46%, #5f9a58 54%, transparent 54%),
+    linear-gradient(-45deg, transparent 46%, #5f9a58 46%, #5f9a58 54%, transparent 54%);
+}
+.cell.center { background: radial-gradient(circle, #ffe9a8 0, #f3c85c 62%, #e1a93a 100%); }
+.cell.center::before { opacity: .35; }
+.cell.homecell { box-shadow: inset 0 0 0 3px var(--hc); }
+.cell.dest::after {
+  content: ""; position: absolute; inset: 9%; border: 3px dashed #f5a300;
+  border-radius: 50%; animation: spin 6s linear infinite;
+}
+.cell.dest.hot::after { border-style: solid; background: #f5b92833; }
+.startmark {
+  position: absolute; left: 3px; bottom: 3px; width: 26%; height: 26%;
+  border-radius: 3px; opacity: .9; pointer-events: none;
+}
+
+/* ---------- cowries ---------- */
+.cowrie {
+  position: relative;
+  width: var(--pc, 24px); height: calc(var(--pc, 24px) * 1.22);
+  border-radius: 50% 50% 48% 48% / 58% 58% 42% 42%;
+  border: 1.5px solid #0004; padding: 0; margin: 0; color: #fff;
+  font-size: calc(var(--pc, 24px) * .4);
+  display: flex; align-items: flex-end; justify-content: center;
+  background: radial-gradient(ellipse at 34% 26%, #fff9 0, #fff0 46%), var(--col);
+  box-shadow: 0 2px 3px #0006, inset 0 -3px 4px #0003;
+  touch-action: manipulation;
+}
+.cowrie::after {
+  content: ""; position: absolute; left: 50%; top: 14%; bottom: 36%; width: 11%;
+  transform: translateX(-50%); background: #0006; border-radius: 10px;
+}
+.cowrie .sym { position: relative; z-index: 1; line-height: 1; margin-bottom: 6%; text-shadow: 0 1px 1px #0008; }
+.cowrie.p0 { --col: var(--c0); } .cowrie.p1 { --col: var(--c1); }
+.cowrie.p2 { --col: var(--c2); } .cowrie.p3 { --col: var(--c3); }
+.cowrie.mini { --pc: 20px; display: inline-flex; margin: 2px 3px; }
+
+#pieceLayer .cowrie {
+  position: absolute; pointer-events: auto;
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg));
+  transition: left .24s ease, top .24s ease, transform .24s ease;
+}
+#pieceLayer .cowrie.pop { animation: pop .32s ease-out; }
+#pieceLayer .cowrie.ghost { pointer-events: none; }
+#pieceLayer .cowrie.cap { animation: cap .7s ease-in forwards; }
+#pieceLayer .cowrie.celebrate { animation: celeb 1.3s ease-in-out forwards; z-index: 40; }
+#pieceLayer .cowrie.celebrate::before {
+  content: "🎉"; position: absolute; left: 50%; top: -90%; font-size: calc(var(--pc) * .9);
+  transform: translateX(-50%); animation: floatup 1.3s ease-out forwards;
+}
+.cowrie.legal { outline: 3px solid #f5b928; outline-offset: 2px; animation: glow .9s infinite alternate; }
+
+@keyframes pop { from { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(.2); opacity: 0; }
+                 to   { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(1);  opacity: 1; } }
+@keyframes cap { 0% { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(1); opacity: 1; }
+                 30% { transform: translate(-50%,-50%) rotate(calc(var(--rot,0deg) + 25deg)) scale(1.3); }
+                 100% { transform: translate(-50%,-50%) rotate(calc(var(--rot,0deg) + 220deg)) scale(.1); opacity: 0; } }
+@keyframes celeb { 0% { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(1); opacity: 1; }
+                   35% { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(1.7); box-shadow: 0 0 18px 8px #ffd54f; }
+                   75% { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(1.3); opacity: 1; }
+                   100% { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(.6); opacity: 0; } }
+@keyframes floatup { from { opacity: 1; top: -40%; } to { opacity: 0; top: -190%; } }
+@keyframes glow { from { box-shadow: 0 2px 3px #0006, 0 0 0 0 #f5b92899; } to { box-shadow: 0 2px 3px #0006, 0 0 10px 4px #f5b928; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- announcement banners ---------- */
+.banner {
+  position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%);
+  max-width: 94%; text-align: center; color: #fff; padding: 14px 24px;
+  border-radius: 18px; text-shadow: 0 3px 8px #000a; box-shadow: 0 8px 24px #0006;
+}
+.banner .b1 { font-size: clamp(34px, 11vw, 66px); font-weight: 900; line-height: 1.05; }
+.banner .b2 { font-size: clamp(15px, 4.6vw, 24px); font-weight: bold; letter-spacing: 2px; margin-top: 4px; }
+.banner.ashto  { background: linear-gradient(135deg, #c2410c, #f59e0b); }
+.banner.chokko { background: linear-gradient(135deg, #6d28d9, #ec4899); }
+.banner.good   { background: linear-gradient(135deg, #15803d, #65a30d); }
+.banner.bad    { background: linear-gradient(135deg, #b91c1c, #7f1d1d); }
+.banner.win    { background: linear-gradient(135deg, #a16207, #facc15); color: #3b2a00; text-shadow: none; }
+.banner.place  { background: linear-gradient(135deg, #1d4ed8, #38bdf8); }
+.particle { position: absolute; left: 50%; top: 46%; font-size: 24px; pointer-events: none; }
+
+/* ---------- panels ---------- */
+#chooser { padding: 2px 0; }
+#chooser .controls { margin-top: 6px; }
+#chooser button { font-size: 13px; padding: 9px 10px; }
+#actionBar { position: sticky; bottom: 6px; z-index: 60; box-shadow: 0 -2px 14px #5b351540, 0 3px 10px #5b35151a; }
+#players { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.badge { background: white; border: 2px solid #dec9a8; border-radius: 9px; padding: 7px 8px; font-size: 12px; line-height: 1.5; }
+.badge.current { box-shadow: 0 0 0 3px #f5b92899; }
+.badge.finished { opacity: .8; }
+.tag { display: inline-block; padding: 0 6px; border-radius: 6px; font-size: 11px; background: #f3e3b8; margin-left: 4px; }
+.tag.rank { background: #ffe082; font-weight: bold; }
+#log { max-height: 140px; overflow-y: auto; font-size: 13px; line-height: 1.5; }
+#results div { margin-top: 4px; font-size: 15px; }
+#results button { margin-top: 10px; }
+.nameGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0 10px; }
+.nameRow { display: flex; align-items: center; gap: 6px; font-weight: bold; }
+.nameRow input { flex: 1; min-width: 0; padding: 7px 8px; border: 1px solid #bba17a; border-radius: 8px; font-size: 14px; }
+.wa { background: #25d366; color: #fff; border-color: #1da851; }
+
+@media (max-width: 380px) { body { padding: 6px; } .panel { padding: 8px; } }
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>અષ્ટોપઘડી</h1>
+  <div class="subtitle">ASHTO PAGHADI · CHAUKA BHARA · ISHTO</div>
+</header>
+
+<main>
+
+  <section class="panel">
+    <div class="controls">
+      <label for="playerCount">Players:</label>
+      <select id="playerCount">
+        <option value="2">2 Players</option>
+        <option value="3">3 Players</option>
+        <option value="4" selected>4 Players</option>
+      </select>
+      <button id="newGame" class="primary">New Game</button>
+      <button id="waShare" class="wa">📲 WhatsApp</button>
+    </div>
+  </section>
+
+  <section class="panel boardPanel">
+    <div id="boardWrap">
+      <div id="board"></div>
+      <div id="pieceLayer"></div>
+      <div id="fx"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="actionBar">
+    <div id="status" aria-live="polite"></div>
+    <div id="hint" class="note"></div>
+    <div id="tossRow">
+      <div id="tossCowries"></div>
+      <div id="tossResult" aria-live="polite"></div>
+      <button id="toss" class="primary">Toss Cowries</button>
+    </div>
+    <div id="chooser" style="display:none"></div>
+  </section>
+
+  <section class="panel"><div id="nameEdit"></div><div id="players"></div></section>
+
+  <section class="panel" id="results" style="display:none"></section>
+
+  <section class="panel">
+    <strong>Game Log</strong>
+    <div id="log"></div>
+  </section>
+
+  <section class="panel note">
+    Toss: 0 open = 8 (ASHTO · અષ્ટો) · 1 = 1 · 2 = 2 · 3 = 3 · 4 = 4 (CHOKKO · ચોક્કો).
+    ભગવાનના (Bhagwan-na): each player's first toss is dedicated to God and moves nothing;
+    the real game starts from the second toss. A toss of 8 also earns a 1-step bonus move, even if the 8 itself cannot be played.
+    Cowries wait on their home house (coloured ring); green crossed houses are safe for
+    everyone. Local pass-and-play prototype — online multiplayer is not included.
+  </section>
+
+</main>
+
+<script>
+"use strict";
+
+/* ===================================================================
+   CONFIG — rule choices that were not fully specified in the rules.
+   Each can be changed here without touching any other code.
+   =================================================================== */
+
+// 5x5 board, copied from the original sketch. Route numbers are internal only.
+const GRID = [
+  [10,  9,  8,  7,  6],
+  [11, 18, 19, 20,  5],
+  [12, 17, 24, 21,  4],
+  [13, "16B", 23, 22, 3],
+  [14, 15, "16A", 1, 2]
+].map(row => row.map(String));
+
+// The X / crossed houses (safe for everyone). 24 is the final house.
+const SAFE_HOUSES = ["4", "8", "12", "16A", "24"];
+
+// Which board sides are used. Each seat is a 90-degree rotation of seat 0.
+// 2 players sit opposite each other.
+const SEATS = { 2: [0, 2], 3: [0, 1, 2], 4: [0, 1, 2, 3] };
+
+// "uniform": 0..4 open are equally likely (as in the original prototype).
+// "cowries": four fair cowries, so 0 open (8) and 4 open are rare (1 in 16 each).
+const TOSS_MODEL = "uniform";
+
+// Bhagwan-na: every player's FIRST toss is dedicated to God. No cowrie moves and nothing
+// is earned. From each player's 2nd toss onward the real game starts.
+// true: a 4 or an 8 on that dedicated toss still gives an extra toss.
+const GOD_TOSS_4_OR_8_GIVES_EXTRA_TURN = false;
+
+// A toss of 4 or 8 always gives an extra toss, even when it has no legal move.
+// (An unplayable 8 also still earns its 1-step bonus.) false = the turn passes instead.
+const EXTRA_TURN_ON_UNPLAYABLE_4_OR_8 = true;
+
+/* ENGINE-START ======================================================
+   Pure game logic. No DOM access, so it can be tested on its own.
+   ================================================================== */
+
+const SAFE = new Set(SAFE_HOUSES);
+const CENTER = "24";
+
+// Seat 0 reference route (as in the rules document).
+const OUTER0 = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16A"];
+const INNER0 = ["16B","17","18","19","20","21","22","23","24"];
+
+const COORD = {};
+GRID.forEach((row, r) => row.forEach((id, c) => { COORD[id] = [r, c]; }));
+
+// Rotate a house 90 degrees anticlockwise about the centre, k times.
+function rotId(id, k) {
+  let [r, c] = COORD[id];
+  for (let i = 0; i < k; i++) { const nr = 4 - c, nc = r; r = nr; c = nc; }
+  return GRID[r][c];
+}
+
+// ROUTES[seat] = { outer: 16 houses (anticlockwise), inner: 9 houses (clockwise, ends at 24) }
+const ROUTES = [0, 1, 2, 3].map(k => ({
+  outer: OUTER0.map(id => rotId(id, k)),
+  inner: INNER0.map(id => rotId(id, k))
+}));
+
+let rand = Math.random;
+function setRand(fn) { rand = fn; }
+
+function rollToss() {
+  let faces;
+  if (TOSS_MODEL === "cowries") {
+    faces = [0, 1, 2, 3].map(() => rand() < 0.5);
+  } else {
+    const open = Math.floor(rand() * 5);
+    const order = [0, 1, 2, 3];
+    for (let i = 3; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    faces = [false, false, false, false];
+    order.slice(0, open).forEach(i => { faces[i] = true; });
+  }
+  const open = faces.filter(Boolean).length;
+  return { open, value: open === 0 ? 8 : open, faces };
+}
+
+function newGameState(n) {
+  return {
+    n,
+    players: SEATS[n].map((seat, i) => ({
+      idx: i, seat, tod: false, rank: null, godTossDone: false,
+      // state: 'home' | 'outer' | 'inner' | 'done'   pos: index along that route
+      pieces: [0, 1, 2, 3].map(id => ({ id, state: "home", pos: 0 }))
+    })),
+    current: 0, toss: null, over: false, nextRank: 1
+  };
+}
+
+function cellOf(game, pIdx, pc) {
+  const P = game.players[pIdx];
+  return (pc.state === "outer" || pc.state === "inner") ? ROUTES[P.seat][pc.state][pc.pos] : null;
+}
+
+// All ways to walk `steps` houses. A player with Tod Malyo may turn into the inner route
+// straight from the house just before home, without stepping on home first (so going
+// inside costs no extra step), or from home itself when the move starts there.
+// The inner option is generated first so it is listed first.
+function walk(ring, pos, steps, tod, path, out) {
+  if (steps === 0) { out.push({ ring, pos, path }); return; }
+  if (ring === "outer") {
+    if (tod && (pos === 14 || (pos === 15 && path.length === 0))) {
+      walk("inner", 0, steps - 1, tod, path.concat([{ ring: "inner", pos: 0 }]), out);
+    }
+    const next = pos < 15 ? pos + 1 : 0;
+    walk("outer", next, steps - 1, tod, path.concat([{ ring: "outer", pos: next }]), out);
+  } else if (pos < 8) {
+    walk("inner", pos + 1, steps - 1, tod, path.concat([{ ring: "inner", pos: pos + 1 }]), out);
+  }
+  // inner route: moving past 24 is not allowed (dead end -> no result)
+}
+
+function legalMoves(game, pIdx, toss) {
+  const P = game.players[pIdx];
+  const moves = [];
+
+  // Leaving home. Cowries wait on the player's home house: the crossed (X) house in the
+  // middle of their side, where the outer lap also ends (16A, 4, 8, 12). They move out from
+  // there, so the first step lands on the first numbered house of the route. Any toss will
+  // do. A group of g cowries may leave together if the toss divides by g, moving toss/g houses.
+  const homeCount = P.pieces.filter(p => p.state === "home").length;
+  for (let g = 1; g <= Math.min(4, homeCount); g++) {
+    if (toss % g) continue;
+    const steps = toss / g, path = [];
+    for (let i = 0; i < steps; i++) path.push({ ring: "outer", pos: i });
+    moves.push({ kind: "enter", g, steps, from: null, to: { ring: "outer", pos: steps - 1 }, path });
+  }
+
+  // Cowries already on the board, grouped by house.
+  const spots = new Map();
+  P.pieces.forEach(pc => {
+    if (pc.state === "outer" || pc.state === "inner") {
+      const k = pc.state + ":" + pc.pos;
+      if (!spots.has(k)) spots.set(k, { ring: pc.state, pos: pc.pos, n: 0 });
+      spots.get(k).n++;
+    }
+  });
+  spots.forEach(s => {
+    const cell = ROUTES[P.seat][s.ring][s.pos];
+    // A stack moves together, except on an X house where its cowries may move independently.
+    const sizes = [];
+    if (SAFE.has(cell)) { for (let g = 1; g <= s.n; g++) sizes.push(g); } else sizes.push(s.n);
+    sizes.forEach(g => {
+      if (toss % g) return;
+      const steps = toss / g, outs = [];
+      walk(s.ring, s.pos, steps, P.tod, [], outs);
+      outs.forEach(o => moves.push({
+        kind: "move", g, steps, from: { ring: s.ring, pos: s.pos },
+        to: { ring: o.ring, pos: o.pos }, path: o.path
+      }));
+    });
+  });
+  return moves;
+}
+
+// Applies a chosen move to the game state and reports everything that happened.
+function applyMove(game, pIdx, move, preferId) {
+  const P = game.players[pIdx];
+  let pool = (move.kind === "enter")
+    ? P.pieces.filter(p => p.state === "home")
+    : P.pieces.filter(p => p.state === move.from.ring && p.pos === move.from.pos);
+  pool = pool.slice().sort((a, b) => ((b.id === preferId) - (a.id === preferId)) || (a.id - b.id));
+  const moving = pool.slice(0, move.g);
+
+  const res = {
+    moving: moving.map(p => p.id), captured: [], reachedIds: [], todGained: false,
+    natod: [], extraReasons: [], extra: false, finished: false, rank: null,
+    gameOver: false, lastRank: null, bonus: false
+  };
+  const destCell = ROUTES[P.seat][move.to.ring][move.to.pos];
+
+  // Capture rules (checked before the move changes anything).
+  const victims = [];
+  if (destCell !== CENTER && !SAFE.has(destCell)) {
+    const present = [];
+    game.players.forEach(Q => {
+      const ids = Q.pieces.filter(pc => cellOf(game, Q.idx, pc) === destCell).map(pc => pc.id);
+      if (ids.length) present.push({ q: Q.idx, ids });
+    });
+    const stackPresent = present.some(o => o.ids.length >= 2);
+    present.forEach(o => {
+      if (o.q === pIdx) return;
+      if (move.g === 1) { if (!stackPresent && o.ids.length === 1) victims.push(o); }
+      else if (o.ids.length === move.g) victims.push(o); // equal-sized stacks capture each other
+    });
+  }
+
+  moving.forEach(p => { p.state = move.to.ring; p.pos = move.to.pos; });
+
+  if (destCell === CENTER) {
+    moving.forEach(p => { p.state = "done"; p.pos = 8; });
+    res.reachedIds = moving.map(p => p.id);
+    res.extraReasons.push("reaching the centre");
+  }
+
+  victims.forEach(v => {
+    const Q = game.players[v.q];
+    v.ids.forEach(id => { Q.pieces[id].state = "home"; Q.pieces[id].pos = 0; });
+    res.captured.push({ pIdx: v.q, ids: v.ids.slice(), cell: destCell });
+  });
+  if (victims.length) {
+    res.extraReasons.push("capture");
+    if (!P.tod) { P.tod = true; res.todGained = true; }                       // Tod Malyo
+    victims.forEach(v => {                                                      // Natod Thaya
+      const Q = game.players[v.q];
+      if (Q.tod && Q.pieces.every(pc => pc.state === "home")) { Q.tod = false; res.natod.push(v.q); }
+    });
+  }
+
+  if (game.toss === 8) res.extraReasons.push("Ashto (8)");
+  if (game.toss === 4) res.extraReasons.push("Chokko (4)");
+
+  if (P.rank === null && P.pieces.every(pc => pc.state === "done")) {
+    P.rank = game.nextRank++; res.finished = true; res.rank = P.rank;
+  }
+  const finishedCount = game.players.filter(q => q.rank !== null).length;
+  if (finishedCount >= game.n - 1) {
+    const last = game.players.find(q => q.rank === null);
+    if (last) { last.rank = game.nextRank++; res.lastRank = { pIdx: last.idx, rank: last.rank }; }
+    game.over = true; res.gameOver = true;
+  }
+  res.extra = res.extraReasons.length > 0 && P.rank === null && !game.over;
+  // A toss of 8 also earns one extra step (any cowrie, player's choice) after the 8 is played.
+  res.bonus = game.toss === 8 && P.rank === null && !game.over;
+  return res;
+}
+
+function nextActivePlayer(game, from) {
+  for (let k = 1; k <= game.n; k++) {
+    const i = (from + k) % game.n;
+    if (game.players[i].rank === null) return i;
+  }
+  return from;
+}
+
+// Bhagwan-na: a player's first toss is dedicated to God. No cowrie moves.
+// Returns null if this is not the player's first toss, otherwise { extra }.
+function godToss(game, pIdx, toss) {
+  const P = game.players[pIdx];
+  if (P.godTossDone) return null;
+  P.godTossDone = true;
+  return { extra: GOD_TOSS_4_OR_8_GIVES_EXTRA_TURN && (toss === 4 || toss === 8) };
+}
+
+function rankLabel(r, n) {
+  if (r === 1) return "THE WINNER!";
+  if (r === n) return "Last / Lost";
+  return r === 2 ? "2nd Place" : r === 3 ? "3rd Place" : r + "th Place";
+}
+/* ENGINE-END ======================================================== */
+
+
+/* ===================================================================
+   SCREEN / INTERACTION
+   =================================================================== */
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const COLORS = ["#b83c36", "#286ca9", "#39834e", "#884b9e"];
+const SYMS = ["●", "◆", "▲", "★"];
+const CANCEL = {};
+
+let game = null, mode = "idle", curMoves = [], token = 0;
+const cellEls = {}, els = new Map(), vis = new Map(), ghosts = new Map(), jit = new Map();
+let tossEls = [], chooserMoves = [], bonusCtx = null;
+
+function pause(ms) {
+  const t = token;
+  return new Promise((res, rej) => setTimeout(() => (t === token ? res() : rej(CANCEL)), ms));
+}
+async function guard(fn) {
+  try { await fn(); } catch (e) { if (e !== CANCEL) throw e; }
+}
+function setStatus(t) { $("status").textContent = t; }
+function log(msg) {
+  const d = document.createElement("div");
+  d.textContent = msg;
+  const box = $("log");
+  box.prepend(d);
+  if (box.children.length > 80) box.children[box.children.length - 1].remove();
+}
+// ---- player names (editable, remembered on this device) ----
+const defName = i => "Player " + (i + 1);
+const who = i => (game && game.players[i] && game.players[i].name) || defName(i);
+function cleanName(v, i) { return String(v).replace(/\s+/g, " ").trim().slice(0, 14) || defName(i); }
+function loadNames() {
+  try { const a = JSON.parse(localStorage.getItem("ashto_names") || "[]"); return Array.isArray(a) ? a : []; }
+  catch (e) { return []; }
+}
+function saveNames() { try { localStorage.setItem("ashto_names", JSON.stringify(customNames)); } catch (e) {} }
+let customNames = loadNames();
+
+function buildNameInputs() {
+  const box = $("nameEdit");
+  box.innerHTML = "";
+  const lab = document.createElement("div");
+  lab.className = "note";
+  lab.textContent = "Player names — tap a name to change it:";
+  box.appendChild(lab);
+  const grid = document.createElement("div");
+  grid.className = "nameGrid";
+  box.appendChild(grid);
+  game.players.forEach(P => {
+    const row = document.createElement("label");
+    row.className = "nameRow";
+    const dot = document.createElement("span");
+    dot.textContent = SYMS[P.seat];
+    dot.style.color = COLORS[P.seat];
+    const inp = document.createElement("input");
+    inp.type = "text";
+    inp.maxLength = 14;
+    inp.placeholder = defName(P.idx);
+    inp.value = customNames[P.idx] || "";
+    inp.setAttribute("aria-label", "Name for " + defName(P.idx));
+    inp.addEventListener("input", () => {
+      customNames[P.idx] = String(inp.value).trim();
+      P.name = cleanName(inp.value, P.idx);
+      saveNames();
+      renderPlayers();
+    });
+    row.appendChild(dot);
+    row.appendChild(inp);
+    grid.appendChild(row);
+  });
+}
+
+// ---- WhatsApp sharing ----
+function shareUrl() {
+  try { const l = window.location; return /^https?:$/.test(l.protocol) ? String(l.href).split("#")[0] : ""; }
+  catch (e) { return ""; }
+}
+function openWhatsApp(text) {
+  const u = "https://wa.me/?text=" + encodeURIComponent(text);
+  const w = window.open(u, "_blank");
+  if (!w) window.location.href = u;
+}
+function inviteText() {
+  const u = shareUrl();
+  return "🐚 Come play Ashto Paghadi (અષ્ટોપઘડી) with me!" + (u ? "\n" + u : "");
+}
+function resultText() {
+  const order = game.players.slice().sort((a, b) => a.rank - b.rank);
+  const u = shareUrl();
+  return "🏆 " + order[0].name + " won Ashto Paghadi (અષ્ટોપઘડી)!\n" +
+    order.map(P => rankLabel(P.rank, game.n) + " — " + P.name).join("\n") +
+    (u ? "\n\nPlay it here: " + u : "");
+}
+
+/* ---------- board ---------- */
+function buildBoard() {
+  const b = $("board");
+  b.innerHTML = "";
+  GRID.forEach(row => row.forEach(id => {
+    const d = document.createElement("div");
+    d.className = "cell" + (SAFE.has(id) ? " safe" : "") + (id === CENTER ? " center" : "");
+    d.dataset.id = id;
+    b.appendChild(d);
+    cellEls[id] = d;
+  }));
+}
+
+function buildTossBox() {
+  const box = $("tossCowries");
+  box.innerHTML = "";
+  tossEls = [0, 1, 2, 3].map(() => {
+    const d = document.createElement("div");
+    d.className = "tc closed";
+    box.appendChild(d);
+    return d;
+  });
+}
+
+/* ---------- natural placement of cowries ---------- */
+function getJit(key) {
+  let j = jit.get(key);
+  if (!j) { j = { a: rand(), b: rand(), c: rand() }; jit.set(key, j); }
+  return j;
+}
+function rerollJit(key) { jit.set(key, { a: rand(), b: rand(), c: rand() }); }
+
+function isLegalPiece(pIdx, pc) {
+  if (mode !== "select" || pIdx !== game.current) return false;
+  if (pc.state === "home") return curMoves.some(m => m.kind === "enter");
+  return (pc.state === "outer" || pc.state === "inner") &&
+    curMoves.some(m => m.kind === "move" && m.from.ring === pc.state && m.from.pos === pc.pos);
+}
+
+function renderPieces() {
+  if (!game) return;
+  const layer = $("pieceLayer");
+  const cell = (layer.clientWidth || 300) / 5;
+  layer.style.setProperty("--pc", (cell * 0.34) + "px");
+
+  const entries = [];
+  game.players.forEach(P => P.pieces.forEach(pc => {
+    const key = P.idx + "-" + pc.id;
+    if (ghosts.has(key) && !vis.has(key)) return;            // a ghost (capture / centre) overrides
+    let loc = vis.get(key) || null, home = false;
+    if (!loc) {
+      if (pc.state === "outer" || pc.state === "inner") loc = { ring: pc.state, pos: pc.pos };
+      else if (pc.state === "home") { loc = { ring: "outer", pos: 15 }; home = true; }  // waits on its home (X) house
+    }
+    if (loc) entries.push({ key, pIdx: P.idx, seat: P.seat, cell: ROUTES[P.seat][loc.ring][loc.pos], piece: pc, home });
+  }));
+  ghosts.forEach((g, key) => {
+    if (!vis.has(key)) entries.push({ key, pIdx: g.pIdx, seat: g.seat, cell: g.cell, ghost: g });
+  });
+
+  const groups = new Map();
+  entries.forEach(e => {
+    if (!groups.has(e.cell)) groups.set(e.cell, []);
+    groups.get(e.cell).push(e);
+  });
+  groups.forEach((arr, cellId) => {
+    const [r, c] = COORD[cellId];
+    const cx = (c + 0.5) * cell, cy = (r + 0.5) * cell;
+    const seed = (r * 5 + c) * 0.9;
+    arr.sort((a, b) => (a.key < b.key ? -1 : 1));
+    arr.forEach((e, i) => {
+      const j = getJit(e.key), n = arr.length;
+      let dx, dy;
+      if (n === 1) { dx = (j.a - 0.5) * cell * 0.16; dy = (j.b - 0.5) * cell * 0.16; }
+      else {
+        const ang = (i / n) * Math.PI * 2 + j.a * 0.9 + seed;
+        const rad = cell * (0.13 + 0.07 * j.b);
+        dx = Math.cos(ang) * rad; dy = Math.sin(ang) * rad;
+      }
+      e.x = cx + dx; e.y = cy + dy; e.rot = (j.c - 0.5) * 60; e.z = 10 + i;
+    });
+  });
+
+  const seen = new Set();
+  entries.forEach(e => {
+    seen.add(e.key);
+    let el = els.get(e.key);
+    if (!el) {
+      el = document.createElement("button");
+      el.className = "cowrie p" + e.seat + " pop";
+      el.innerHTML = '<span class="sym">' + SYMS[e.seat] + "</span>";
+      el.title = who(e.pIdx);
+      const key = e.key;
+      el.addEventListener("click", () => onPieceClick(key));
+      layer.appendChild(el);
+      els.set(e.key, el);
+      setTimeout(() => el.classList.remove("pop"), 450);
+    }
+    el.style.left = e.x + "px";
+    el.style.top = e.y + "px";
+    el.style.setProperty("--rot", e.rot + "deg");
+    el.style.setProperty("--pc", (e.home ? cell * 0.27 : cell * 0.34) + "px");
+    const legal = !e.ghost && isLegalPiece(e.pIdx, e.piece);
+    el.classList.toggle("legal", legal);
+    el.classList.toggle("ghost", !!e.ghost);
+    el.classList.toggle("cap", !!(e.ghost && e.ghost.cls === "cap"));
+    el.classList.toggle("celebrate", !!(e.ghost && e.ghost.cls === "celebrate"));
+    el.style.zIndex = legal ? 30 : (e.ghost ? 5 : e.z);
+  });
+  els.forEach((el, key) => { if (!seen.has(key)) { el.remove(); els.delete(key); } });
+}
+
+/* ---------- player panels ---------- */
+function renderPlayers() {
+  if (!game) return;
+  const box = $("players");
+  box.innerHTML = "";
+  game.players.forEach(P => {
+    const b = document.createElement("div");
+    const isCur = P.idx === game.current && !game.over && P.rank === null;
+    b.className = "badge" + (isCur ? " current" : "") + (P.rank !== null ? " finished" : "");
+    b.style.borderColor = COLORS[P.seat];
+
+    const done = P.pieces.filter(p => p.state === "done").length;
+    const head = document.createElement("div");
+    head.innerHTML = '<strong style="color:' + COLORS[P.seat] + '">' + SYMS[P.seat] + " " + esc(who(P.idx)) + "</strong>" +
+      (isCur ? " ◀" : "") +
+      (P.tod ? '<span class="tag">Tod Malyo</span>' : "") +
+      (P.rank !== null ? '<span class="tag rank">' + rankLabel(P.rank, game.n) + "</span>" : "");
+    b.appendChild(head);
+
+    const homeRow = document.createElement("div");
+    homeRow.textContent = "At home: " + P.pieces.filter(p => p.state === "home").length;
+    b.appendChild(homeRow);
+
+    const d2 = document.createElement("div");
+    d2.textContent = "Reached centre: " + done + "/4";
+    b.appendChild(d2);
+    box.appendChild(b);
+  });
+}
+
+/* ---------- choosing a move ---------- */
+function describe(m, opts) {
+  const unit = m.steps === 1 ? "cell" : "cells";
+  const who1 = m.kind === "enter"
+    ? (m.g === 1 ? "Bring out 1" : "Bring out " + m.g + " together")
+    : (m.g === 1 ? "Move 1" : "Move " + m.g + " together");
+  let s = who1 + " · " + m.steps + " " + unit;
+  if (opts.some(o => o !== m && o.g === m.g && o.steps === m.steps)) {
+    s += m.to.ring === "inner" ? " · inner route" : " · outer route";
+  }
+  return s;
+}
+
+function clearDest() {
+  Object.keys(cellEls).forEach(id => { cellEls[id].classList.remove("dest", "hot"); });
+}
+function hideChooser() {
+  $("tossRow").style.display = "flex";
+  $("chooser").style.display = "none";
+  $("chooser").innerHTML = "";
+  chooserMoves = [];
+  clearDest();
+}
+function destCellId(m) { return ROUTES[game.players[game.current].seat][m.to.ring][m.to.pos]; }
+
+function showChooser(opts, preferId) {
+  // the inner route is always offered first
+  opts = opts.slice().sort((a, b) => (b.to.ring === "inner") - (a.to.ring === "inner"));
+  clearDest();
+  const box = $("chooser");
+  box.innerHTML = "";
+  const title = document.createElement("strong");
+  title.textContent = "Choose how to move:";
+  box.appendChild(title);
+  const row = document.createElement("div");
+  row.className = "controls";
+  opts.forEach(m => {
+    const b = document.createElement("button");
+    b.textContent = describe(m, opts);
+    const cid = destCellId(m);
+    cellEls[cid].classList.add("dest");
+    b.addEventListener("mouseenter", () => cellEls[cid].classList.add("hot"));
+    b.addEventListener("mouseleave", () => cellEls[cid].classList.remove("hot"));
+    b.addEventListener("click", () => { guard(() => runMove(m, preferId)); });
+    row.appendChild(b);
+  });
+  const cancel = document.createElement("button");
+  cancel.textContent = "Cancel";
+  cancel.addEventListener("click", hideChooser);
+  row.appendChild(cancel);
+  box.appendChild(row);
+  box.style.display = "block";
+  $("tossRow").style.display = "none";
+  chooserMoves = opts;
+}
+
+function choose(opts, preferId) {
+  if (opts.length === 1) guard(() => runMove(opts[0], preferId));
+  else showChooser(opts, preferId);
+}
+
+// If a player has only ONE cowrie left in play, it moves by itself after the toss.
+// If it has Tod and can go inner or outer, the route options appear instead (inner first).
+function maybeAutoPlay() {
+  if (mode !== "select" || !game || !curMoves.length) return;
+  const pIdx = game.current;
+  const left = game.players[pIdx].pieces.filter(pc => pc.state !== "done");
+  if (left.length !== 1) return;
+  const only = left[0];
+  if (curMoves.length === 1) {
+    const m = curMoves[0], t = token;
+    setStatus(who(pIdx) + ": last cowrie — moving automatically.");
+    guard(async () => {
+      await pause(750);
+      if (t === token && mode === "select" && curMoves[0] === m) await runMove(m, only.id);
+    });
+  } else {
+    setStatus(who(pIdx) + ": last cowrie — choose the route (inner or outer).");
+    showChooser(curMoves.slice(), only.id);
+  }
+}
+
+function onPieceClick(key) {
+  if (mode !== "select") return;
+  const [pI, id] = key.split("-").map(Number);
+  if (pI !== game.current) return;
+  const pc = game.players[pI].pieces[id];
+  if (pc.state === "home") { onHomeClick(pI, id); return; }
+  if (pc.state !== "outer" && pc.state !== "inner") return;
+  const opts = curMoves.filter(m => m.kind === "move" && m.from.ring === pc.state && m.from.pos === pc.pos);
+  if (!opts.length) return;
+  choose(opts, id);
+}
+
+function onHomeClick(pIdx, pieceId) {
+  if (mode !== "select" || pIdx !== game.current) return;
+  const opts = curMoves.filter(m => m.kind === "enter");
+  if (!opts.length) return;
+  choose(opts, pieceId);
+}
+
+/* ---------- effects ---------- */
+function burst(n, emojis) {
+  const fx = $("fx");
+  const W = fx.clientWidth || 300;
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement("span");
+    s.className = "particle";
+    s.textContent = emojis[i % emojis.length];
+    fx.appendChild(s);
+    const ang = rand() * Math.PI * 2, dist = W * (0.22 + rand() * 0.32);
+    if (s.animate) {
+      const a = s.animate([
+        { transform: "translate(-50%,-50%) scale(.4)", opacity: 1 },
+        { transform: "translate(calc(-50% + " + Math.cos(ang) * dist + "px), calc(-50% + " + Math.sin(ang) * dist +
+          "px)) scale(1.3) rotate(" + rand() * 360 + "deg)", opacity: 0 }
+      ], { duration: 1000 + rand() * 600, easing: "ease-out" });
+      a.onfinish = () => s.remove();
+    } else setTimeout(() => s.remove(), 1200);
+  }
+}
+
+async function banner(t1, t2, cls, ms, emojis) {
+  const el = document.createElement("div");
+  el.className = "banner " + cls;
+  el.innerHTML = '<div class="b1">' + esc(t1) + '</div><div class="b2">' + esc(t2) + "</div>";
+  $("fx").appendChild(el);
+  if (el.animate) {
+    el.animate([
+      { transform: "translate(-50%,-50%) scale(.2) rotate(-12deg)", opacity: 0 },
+      { transform: "translate(-50%,-50%) scale(1.15) rotate(3deg)", opacity: 1, offset: 0.25 },
+      { transform: "translate(-50%,-50%) scale(1) rotate(0deg)", opacity: 1, offset: 0.8 },
+      { transform: "translate(-50%,-50%) scale(1.25)", opacity: 0 }
+    ], { duration: ms, easing: "ease-out" });
+  }
+  if (emojis) burst(18, emojis);
+  try { await pause(ms); } finally { el.remove(); }
+}
+
+async function animateToss(t) {
+  tossEls.forEach(c => { c.classList.remove("open"); c.classList.remove("closed"); c.classList.add("closed"); });
+  tossEls.forEach((c, i) => {
+    if (c.animate) {
+      c.animate([
+        { transform: "translateY(0) rotate(0deg)" },
+        { transform: "translateY(-36px) rotate(200deg)", offset: 0.4 },
+        { transform: "translateY(0) rotate(360deg)" }
+      ], { duration: 650 + i * 90, easing: "ease-in-out" });
+    }
+  });
+  await pause(650 + 3 * 90 + 40);
+  tossEls.forEach((c, i) => {
+    c.classList.remove("closed");
+    c.classList.add(t.faces[i] ? "open" : "closed");
+  });
+}
+
+/* ---------- turn flow ---------- */
+function updateHint() {
+  if (!game || game.over) { $("hint").textContent = ""; return; }
+  const P = game.players[game.current];
+  $("hint").textContent = P.godTossDone
+    ? "4 (CHOKKO · ચોક્કો) or 8 (ASHTO · અષ્ટો) = extra toss · 8 also gives a 1-step bonus."
+    : "ભગવાનના — BHAGWAN-NA: your first toss is dedicated to God. No cowrie moves.";
+}
+function beginToss(statusText) {
+  game.toss = null; curMoves = []; mode = "toss"; bonusCtx = null;
+  updateHint();
+  $("toss").disabled = false;
+  hideChooser(); renderPieces(); renderPlayers();
+  setStatus(statusText);
+}
+function nextTurn() {
+  game.current = nextActivePlayer(game, game.current);
+  beginToss(who(game.current) + "'s turn. Toss the cowries.");
+}
+
+async function doToss() {
+  if (mode !== "toss" || !game || game.over) return;
+  mode = "animating";
+  $("toss").disabled = true;
+  hideChooser();
+  $("tossResult").textContent = "";
+  const t = rollToss();
+  game.toss = t.value;
+  await animateToss(t);
+
+  const tp = game.current;
+  const gt = godToss(game, tp, t.value);
+  if (gt) {                                    // Bhagwan-na: the first toss is dedicated to God
+    $("tossResult").textContent = t.value + " · 🙏";
+    log(who(tp) + " tossed " + t.value + " — dedicated to God (ભગવાનના). No cowrie moves.");
+    setStatus(who(tp) + "'s first toss (" + t.value + ") is dedicated to God. No cowrie moves.");
+    await banner("ભગવાનના", "BHAGWAN-NA · offered to God", "good", 1500, ["🙏", "✨"]);
+    if (gt.extra) {
+      log(who(tp) + " gets an extra toss — the game starts now.");
+      beginToss(who(tp) + " gets an extra toss. Toss the cowries.");
+    } else nextTurn();
+    return;
+  }
+
+  const label = t.value === 8 ? "8 · અષ્ટો! ASHTO!" : t.value === 4 ? "4 · ચોક્કો! CHOKKO!" : String(t.value);
+  $("tossResult").textContent = label;
+  log(who(game.current) + " tossed " + t.value + " (" + t.open + " open).");
+  if (t.value === 8) { log("અષ્ટો! ASHTO!"); await banner("અષ્ટો!", "ASHTO! · 8", "ashto", 1500, ["🐚", "✨", "🔥"]); }
+  if (t.value === 4) { log("ચોક્કો! CHOKKO!"); await banner("ચોક્કો!", "CHOKKO! · 4", "chokko", 1500, ["🐚", "✨", "⭐"]); }
+
+  curMoves = legalMoves(game, game.current, t.value);
+  if (!curMoves.length) {
+    const cur = game.current;
+    // An unplayable 8 still earns the 1-step Ashto bonus, if any cowrie can use it.
+    if (t.value === 8) {
+      const bonusMoves = legalMoves(game, cur, 1);
+      if (bonusMoves.length) {
+        log(who(cur) + ": the 8 cannot be played, but the Ashto bonus step is still allowed.");
+        game.toss = 1;
+        curMoves = bonusMoves;
+        bonusCtx = { extra: EXTRA_TURN_ON_UNPLAYABLE_4_OR_8, reasons: EXTRA_TURN_ON_UNPLAYABLE_4_OR_8 ? ["Ashto (8)"] : [] };
+        mode = "select";
+        $("tossResult").textContent = "8 + 1 step";
+        renderPieces(); renderPlayers();
+        setStatus(who(cur) + ": the 8 cannot be played, but you still get the ASHTO bonus — move any cowrie 1 step. Tap a glowing cowrie.");
+        maybeAutoPlay();
+        return;
+      }
+    }
+    setStatus("No legal move for " + who(game.current) + ". Turn passes.");
+    log(who(game.current) + " has no legal move.");
+    renderPieces(); renderPlayers();
+    await pause(1300);
+    if (EXTRA_TURN_ON_UNPLAYABLE_4_OR_8 && (t.value === 4 || t.value === 8)) {
+      log(who(game.current) + " gets an extra turn — " + (t.value === 8 ? "Ashto (8)" : "Chokko (4)") + ".");
+      beginToss(who(game.current) + " gets an extra turn. Toss the cowries.");
+    } else nextTurn();
+    return;
+  }
+  mode = "select";
+  renderPieces(); renderPlayers();
+  setStatus(who(game.current) + " tossed " + t.value + ". Tap a glowing cowrie.");
+  maybeAutoPlay();
+}
+
+async function runMove(move, preferId) {
+  if (mode !== "select") return;
+  mode = "animating";
+  hideChooser();
+  const pIdx = game.current, P = game.players[pIdx];
+  const res = applyMove(game, pIdx, move, preferId);
+  const keys = res.moving.map(id => pIdx + "-" + id);
+  log(who(pIdx) + ": " + describe(move, [move]) + ".");
+
+  // Captured cowries stay visible until the mover arrives.
+  res.captured.forEach(c => c.ids.forEach(id => {
+    ghosts.set(c.pIdx + "-" + id, { pIdx: c.pIdx, seat: game.players[c.pIdx].seat, cell: c.cell, cls: "" });
+  }));
+
+  for (let i = 0; i < move.path.length; i++) {
+    keys.forEach(k => vis.set(k, move.path[i]));
+    renderPieces();
+    await pause(i === 0 && move.kind === "enter" ? 340 : 250);
+  }
+
+  res.reachedIds.forEach(id => {
+    ghosts.set(pIdx + "-" + id, { pIdx, seat: P.seat, cell: CENTER, cls: "celebrate" });
+  });
+  keys.forEach(k => { vis.delete(k); rerollJit(k); });
+  res.captured.forEach(c => c.ids.forEach(id => {
+    const g = ghosts.get(c.pIdx + "-" + id);
+    if (g) g.cls = "cap";
+  }));
+  renderPieces(); renderPlayers();
+
+  if (res.reachedIds.length) {
+    log(who(pIdx) + " reached the centre with " + res.reachedIds.length + " cowrie" + (res.reachedIds.length > 1 ? "s" : "") + "!");
+    burst(14, ["🎉", "✨", "🐚"]);
+  }
+  res.captured.forEach(c => log(who(pIdx) + " captured " + who(c.pIdx) + "'s " + c.ids.length + (c.ids.length > 1 ? " cowries" : " cowrie") + "!"));
+
+  if (res.captured.length || res.reachedIds.length) {
+    await pause(res.reachedIds.length ? 1350 : 780);
+    ghosts.forEach((g, key) => {                      // captured cowries reappear at home
+      if (g.cls === "cap") { const el = els.get(key); if (el) { el.remove(); els.delete(key); } }
+    });
+    ghosts.clear();
+    renderPieces();
+  }
+
+  if (res.todGained) {
+    log(who(pIdx) + ": તોડ મળ્યો — TOD MALYO! Inner route unlocked.");
+    await banner("તોડ મળ્યો!", "TOD MALYO! · " + who(pIdx), "good", 1300, ["⚔️", "✨"]);
+  }
+  for (const q of res.natod) {
+    log(who(q) + ": નતોડ થયા — NATOD THAYA! Tod lost.");
+    await banner("નતોડ થયા", "NATOD THAYA! · " + who(q), "bad", 1300, ["💔"]);
+  }
+  renderPlayers();
+
+  if (res.finished) {
+    const lab = rankLabel(res.rank, game.n);
+    log(who(pIdx) + " — " + lab);
+    if (res.rank === 1) await banner("🏆 THE WINNER!", who(pIdx), "win", 1900, ["🏆", "🎉", "✨", "🐚"]);
+    else await banner(lab, who(pIdx), "place", 1400, ["🎉"]);
+  }
+  if (res.lastRank) log(who(res.lastRank.pIdx) + " — " + rankLabel(res.lastRank.rank, game.n));
+
+  if (game.over) { bonusCtx = null; showResults(); return; }
+
+  let extra = res.extra;
+  const reasons = res.extraReasons.slice();
+  if (bonusCtx) {                                      // this move was the Ashto bonus step
+    bonusCtx.reasons.forEach(r => { if (!reasons.includes(r)) reasons.push(r); });
+    extra = (extra || bonusCtx.extra) && P.rank === null;
+    bonusCtx = null;
+  } else if (res.bonus) {                              // an 8 was just played: offer the 1-step bonus
+    game.toss = 1;
+    curMoves = legalMoves(game, pIdx, 1);
+    if (curMoves.length) {
+      bonusCtx = { extra, reasons: reasons.slice() };
+      mode = "select";
+      $("tossResult").textContent = "8 + 1 step";
+      renderPieces(); renderPlayers();
+      log(who(pIdx) + " gets the Ashto bonus: one extra step with any cowrie.");
+      setStatus(who(pIdx) + ": ASHTO bonus — move any cowrie 1 step. Tap a glowing cowrie.");
+      maybeAutoPlay();
+      return;
+    }
+    log(who(pIdx) + ": no legal move for the 1-step Ashto bonus.");
+  }
+
+  if (extra) {
+    const why = reasons.join(" + ");
+    log(who(pIdx) + " gets an extra turn — " + why + ".");
+    beginToss(who(pIdx) + " gets an extra turn (" + why + "). Toss the cowries.");
+  } else nextTurn();
+}
+
+function showResults() {
+  mode = "over";
+  $("toss").disabled = true;
+  hideChooser();
+  const order = game.players.slice().sort((a, b) => a.rank - b.rank);
+  const box = $("results");
+  box.innerHTML = "";
+  const h = document.createElement("strong");
+  h.textContent = "Final result";
+  box.appendChild(h);
+  order.forEach(P => {
+    const d = document.createElement("div");
+    d.innerHTML = (P.rank === 1 ? "🏆 " : "") + rankLabel(P.rank, game.n) +
+      ' — <b style="color:' + COLORS[P.seat] + '">' + esc(who(P.idx)) + "</b>";
+    box.appendChild(d);
+  });
+  const shareBtn = document.createElement("button");
+  shareBtn.className = "wa";
+  shareBtn.textContent = "📲 Share result on WhatsApp";
+  shareBtn.addEventListener("click", () => openWhatsApp(resultText()));
+  box.appendChild(shareBtn);
+  box.style.display = "block";
+  renderPieces(); renderPlayers();
+  setStatus("Game over. " + who(order[0].idx) + " is THE WINNER!");
+}
+
+function newGame() {
+  token++;
+  const n = Number($("playerCount").value);
+  game = newGameState(n);
+  game.players.forEach(P => { P.name = cleanName(customNames[P.idx] || "", P.idx); });
+  buildNameInputs();
+  els.forEach(el => el.remove());
+  els.clear(); vis.clear(); ghosts.clear(); jit.clear();
+  $("fx").innerHTML = "";
+  $("log").innerHTML = "";
+  $("results").innerHTML = "";
+  $("results").style.display = "none";
+  $("tossResult").textContent = "";
+  Object.keys(cellEls).forEach(id => cellEls[id].classList.remove("homecell"));
+  game.players.forEach(P => {                           // each home house gets a coloured ring
+    const c = cellEls[ROUTES[P.seat].outer[15]];
+    c.classList.add("homecell");
+    c.style.setProperty("--hc", COLORS[P.seat]);
+  });
+  bonusCtx = null;
+  buildTossBox();
+  log("New game started (" + n + " players). Each player's first toss is dedicated to God (ભગવાનના — Bhagwan-na); the real game starts from the second toss.");
+  beginToss(who(0) + "'s turn. Toss the cowries.");
+  guard(() => banner("ભગવાનના", "BHAGWAN-NA · first toss is for God", "good", 1800, ["🙏", "✨", "🐚"]));
+}
+
+$("newGame").addEventListener("click", newGame);
+$("waShare").addEventListener("click", () => openWhatsApp(inviteText()));
+$("playerCount").addEventListener("change", newGame);
+$("toss").addEventListener("click", () => { guard(doToss); });
+window.addEventListener("resize", renderPieces);
+
+buildBoard();
+newGame();
+</script>
+
+</body>
+</html>
