@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ashto Paghadi</title>
+
+<style>
+:root { --c0:#b83c36; --c1:#286ca9; --c2:#39834e; --c3:#884b9e; }
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 12px;
+  font-family: Arial, sans-serif;
+  color: #38271d;
+  background: linear-gradient(135deg, #EDE9D6, #E0DCC4);   /* chiffon ivory tones */
+}
+header { text-align: center; margin-bottom: 8px; }
+h1 { margin: 2px; font-size: 24px; }
+.subtitle { font-size: 12px; }
+main { max-width: 600px; margin: auto; }
+
+.panel {
+  background: #FFFFF0;                                     /* light ivory */
+  border: 1px solid #d8d2ba;
+  border-radius: 13px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 3px 10px #5b35151a;
+}
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+button, select {
+  font-size: 14px; padding: 9px 11px;
+  border: 1px solid #bba17a; border-radius: 8px;
+  background: white; color: #38271d;
+}
+button { cursor: pointer; font-weight: bold; }
+button.primary { background: #803e2b; color: white; }
+button:disabled { opacity: .4; cursor: default; }
+
+#status { font-weight: bold; line-height: 1.4; min-height: 2.8em; }
+#hint { margin: 2px 0 6px; min-height: 1.5em; color: #6b4a2b; }
+.note { font-size: 12px; line-height: 1.5; }
+
+/* ---------- toss display ---------- */
+#tossRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#tossCowries { display: flex; gap: 6px; }
+.tc { width: 24px; height: 32px; border-radius: 50%; position: relative; }
+.tc.closed {
+  background: radial-gradient(ellipse at 38% 30%, #d6aa72, #8a5a2b);
+  box-shadow: inset 0 -4px 6px #0003, 0 2px 3px #0004;
+}
+.tc.closed::after { content:""; position:absolute; inset:32% 30%; border-radius:50%; background:#0002; }
+.tc.open {
+  background: radial-gradient(ellipse at 38% 30%, #fffdf5, #ecd7a4);
+  box-shadow: inset 0 -4px 6px #0003, 0 2px 3px #0004;
+}
+.tc.open::after { content:""; position:absolute; left:46%; top:13%; bottom:13%; width:9%; background:#6b4423; border-radius:6px; }
+#tossResult { font-size: 16px; font-weight: bold; color: #9a3f2d; line-height: 1.2; min-width: 70px; }
+#toss { flex: 1; min-width: 130px; font-size: 16px; padding: 12px; }
+
+/* ---------- board ---------- */
+#boardWrap {
+  position: relative; width: 100%; aspect-ratio: 1 / 1; margin: 0 auto;
+  background: #FFFFF0;                                     /* light ivory board */ border-radius: 12px; padding: 6px;
+  overflow: hidden; touch-action: manipulation; user-select: none;
+}
+/* keep the board and the toss bar on one screen, even on short viewports */
+@supports (width: min(1px, 2px)) { #boardWrap { width: min(100%, max(280px, calc(100vh - 340px))); } }
+@supports (height: 100dvh) { #boardWrap { width: min(100%, max(280px, calc(100dvh - 340px))); } }
+.boardPanel { padding: 8px; }
+#board, #pieceLayer, #fx { position: absolute; left: 6px; top: 6px; right: 6px; bottom: 6px; }
+#board { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr); }
+#pieceLayer, #fx { pointer-events: none; }
+
+.cell { position: relative; background: #F2EFDE; border: 1px solid #cfc8ae; }
+.cell.safe { background: #e3f1d9; }
+.cell.safe::before {
+  content: ""; position: absolute; inset: 8%; opacity: .6;
+  background:
+    linear-gradient(45deg,  transparent 46%, #5f9a58 46%, #5f9a58 54%, transparent 54%),
+    linear-gradient(-45deg, transparent 46%, #5f9a58 46%, #5f9a58 54%, transparent 54%);
+}
+.cell.center { background: radial-gradient(circle, #ffe9a8 0, #f3c85c 62%, #e1a93a 100%); }
+.cell.center::before { opacity: .35; }
+.cell.homecell { box-shadow: inset 0 0 0 3px var(--hc); }
+.cell.dest::after {
+  content: ""; position: absolute; inset: 9%; border: 3px dashed #f5a300;
+  border-radius: 50%; animation: spin 6s linear infinite;
+}
+.cell.dest.hot::after { border-style: solid; background: #f5b92833; }
+.startmark {
+  position: absolute; left: 3px; bottom: 3px; width: 26%; height: 26%;
+  border-radius: 3px; opacity: .9; pointer-events: none;
+}
+
+/* ---------- cowries ---------- */
+.cowrie {
+  position: relative;
+  width: var(--pc, 24px); height: calc(var(--pc, 24px) * 1.22);
+  border-radius: 50% 50% 48% 48% / 58% 58% 42% 42%;
+  border: 1.5px solid #0004; padding: 0; margin: 0; color: #fff;
+  font-size: calc(var(--pc, 24px) * .4);
+  display: flex; align-items: flex-end; justify-content: center;
+  background: radial-gradient(ellipse at 34% 26%, #fff9 0, #fff0 46%), var(--col);
+  box-shadow: 0 2px 3px #0006, inset 0 -3px 4px #0003;
+  touch-action: manipulation;
+}
+.cowrie::after {
+  content: ""; position: absolute; left: 50%; top: 14%; bottom: 36%; width: 11%;
+  transform: translateX(-50%); background: #0006; border-radius: 10px;
+}
+.cowrie .sym { position: relative; z-index: 1; line-height: 1; margin-bottom: 6%; text-shadow: 0 1px 1px #0008; }
+.cowrie.p0 { --col: var(--c0); } .cowrie.p1 { --col: var(--c1); }
+.cowrie.p2 { --col: var(--c2); } .cowrie.p3 { --col: var(--c3); }
+.cowrie.mini { --pc: 20px; display: inline-flex; margin: 2px 3px; }
+
+#pieceLayer .cowrie {
+  position: absolute; pointer-events: auto;
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg));
+  transition: left .24s ease, top .24s ease, transform .24s ease;
+}
+#pieceLayer .cowrie.pop { animation: pop .32s ease-out; }
+#pieceLayer .cowrie.ghost { pointer-events: none; }
+#pieceLayer .cowrie.cap { animation: cap .7s ease-in forwards; }
+#pieceLayer .cowrie.celebrate { animation: celeb 1.3s ease-in-out forwards; z-index: 40; }
+#pieceLayer .cowrie.celebrate::before {
+  content: "🎉"; position: absolute; left: 50%; top: -90%; font-size: calc(var(--pc) * .9);
+  transform: translateX(-50%); animation: floatup 1.3s ease-out forwards;
+}
+.cowrie.legal { outline: 3px solid #f5b928; outline-offset: 2px; animation: glow .9s infinite alternate; }
+
+@keyframes pop { from { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(.2); opacity: 0; }
+                 to   { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(1);  opacity: 1; } }
+@keyframes cap { 0% { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(1); opacity: 1; }
+                 30% { transform: translate(-50%,-50%) rotate(calc(var(--rot,0deg) + 25deg)) scale(1.3); }
+                 100% { transform: translate(-50%,-50%) rotate(calc(var(--rot,0deg) + 220deg)) scale(.1); opacity: 0; } }
+@keyframes celeb { 0% { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(1); opacity: 1; }
+                   35% { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(1.7); box-shadow: 0 0 18px 8px #ffd54f; }
+                   75% { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(1.3); opacity: 1; }
+                   100% { transform: translate(-50%,-50%) rotate(var(--rot,0deg)) scale(.6); opacity: 0; } }
+@keyframes floatup { from { opacity: 1; top: -40%; } to { opacity: 0; top: -190%; } }
+@keyframes glow { from { box-shadow: 0 2px 3px #0006, 0 0 0 0 #f5b92899; } to { box-shadow: 0 2px 3px #0006, 0 0 10px 4px #f5b928; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- announcement banners ---------- */
+.banner {
+  position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%);
+  max-width: 94%; text-align: center; color: #fff; padding: 14px 24px;
+  border-radius: 18px; text-shadow: 0 3px 8px #000a; box-shadow: 0 8px 24px #0006;
+}
+.banner .b1 { font-size: clamp(34px, 11vw, 66px); font-weight: 900; line-height: 1.05; }
+.banner .b2 { font-size: clamp(15px, 4.6vw, 24px); font-weight: bold; letter-spacing: 2px; margin-top: 4px; }
+.banner.ashto  { background: linear-gradient(135deg, #c2410c, #f59e0b); }
+.banner.chokko { background: linear-gradient(135deg, #6d28d9, #ec4899); }
+.banner.good   { background: linear-gradient(135deg, #15803d, #65a30d); }
+.banner.bad    { background: linear-gradient(135deg, #b91c1c, #7f1d1d); }
+.banner.win    { background: linear-gradient(135deg, #a16207, #facc15); color: #3b2a00; text-shadow: none; }
+.banner.place  { background: linear-gradient(135deg, #1d4ed8, #38bdf8); }
+.particle { position: absolute; left: 50%; top: 46%; font-size: 24px; pointer-events: none; }
+
+/* ---------- panels ---------- */
+#chooser { padding: 2px 0; }
+#chooser .controls { margin-top: 6px; }
+#chooser button { font-size: 13px; padding: 9px 10px; }
+#actionBar { position: sticky; bottom: 6px; z-index: 60; box-shadow: 0 -2px 14px #5b351540, 0 3px 10px #5b35151a; }
+#players { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.badge { background: white; border: 2px solid #dec9a8; border-radius: 9px; padding: 7px 8px; font-size: 12px; line-height: 1.5; }
+.badge.current { box-shadow: 0 0 0 3px #f5b92899; }
+.badge.finished { opacity: .8; }
+.tag { display: inline-block; padding: 0 6px; border-radius: 6px; font-size: 11px; background: #f3e3b8; margin-left: 4px; }
+.tag.rank { background: #ffe082; font-weight: bold; }
+#log { max-height: 140px; overflow-y: auto; font-size: 13px; line-height: 1.5; }
+#results div { margin-top: 4px; font-size: 15px; }
+#results button { margin-top: 10px; }
+.nameGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0 10px; }
+.nameRow { display: flex; align-items: center; gap: 6px; font-weight: bold; }
+.nameRow input { flex: 1; min-width: 0; padding: 7px 8px; border: 1px solid #bba17a; border-radius: 8px; font-size: 14px; }
+.wa { background: #25d366; color: #fff; border-color: #1da851; }
+#modal { position: fixed; inset: 0; z-index: 200; background: #000a; align-items: center; justify-content: center; padding: 16px; }
+#modal .box { background: #FFFFF0; border-radius: 14px; padding: 16px; max-width: 420px; box-shadow: 0 10px 30px #000a; }
+#modal .box p { margin: 6px 0 12px; line-height: 1.45; }
+#modal .controls { justify-content: flex-end; }
+
+@media (max-width: 380px) { body { padding: 6px; } .panel { padding: 8px; } }
+</style>
+<style>
+.hr{border-top:1px solid #d8d2ba;margin:12px 0;}
+.code{font-size:32px;letter-spacing:4px;font-weight:bold;text-align:center;}
+.btn{background:#803e2b;color:#fff;padding:10px 16px;border-radius:8px;font-weight:bold;cursor:pointer;text-decoration:none;display:inline-block;font-size:14px;}
+.row{display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:14px;}
+.seat{background:#F2EFDE;border-radius:6px;padding:6px 10px;margin:3px 0;}
+</style>
+</head>
+
+<body>
+
+
+<header>
+  <h1>અષ્ટોપઘડી</h1>
+  <div class="subtitle">ASHTO PAGHADI · CHAUKA BHARA · ISHTO · <span id="verTag">ONLINE v1</span></div>
+</header>
+
+<div class="panel" id="home" style="display:none;">
+  <input id="myName" maxlength="14" placeholder="Your name / તમારું નામ" style="width:90%;">
+  <div class="hr"></div>
+  <b>Create room / રૂમ બનાવો</b>
+  <div class="row"><span>Players / ખેલાડીઓ</span>
+    <select id="numPlayers">
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4" selected>4</option>
+    </select>
+  </div>
+  <div class="controls"><button id="createBtn" class="primary">Create Room / રૂમ બનાવો</button></div>
+  <div class="hr"></div>
+  <b>Join room / રૂમમાં જોડાઓ</b><br>
+  <input id="roomCode" maxlength="8" placeholder="Room code / કોડ" style="text-transform:uppercase;">
+  <div class="controls"><button id="joinBtn" class="primary">Join / જોડાઓ</button></div>
+  <div class="note">Seats nobody joins are filled by bots. / જે બેઠકો ખાલી રહે તે બોટથી ભરાશે.</div>
+</div>
+
+<div class="panel" id="lobby" style="display:none;">
+  <div class="note" style="text-align:center;">Room code / રૂમ કોડ</div>
+  <div class="code" id="codeBig"></div>
+  <div style="text-align:center;">
+    <a class="btn wa" id="waBtn" target="_blank">📲 Share on WhatsApp</a>
+    <div class="note" id="linkTxt" style="word-break:break-all;"></div>
+  </div>
+  <div class="hr"></div>
+  <b>Players / ખેલાડીઓ</b>
+  <div id="lobbyList"></div>
+  <div class="note" style="margin-top:8px;">Change your name / તમારું નામ બદલો</div>
+  <div class="controls"><input id="lobbyName" maxlength="14" style="flex:1;min-width:0;"> <button id="renameBtn">Update / બદલો</button></div>
+  <div class="hr"></div>
+  <div class="controls">
+    <button id="startBtn" class="primary" style="display:none;">Start Game / રમત શરૂ કરો</button>
+  </div>
+  <div class="note" id="waitMsg" style="display:none;">Waiting for the host to start... / હોસ્ટ રમત શરૂ કરે તેની રાહ...</div>
+</div>
+
+<main id="gameWrap" style="display:none;">
+
+  <section class="panel boardPanel">
+    <div id="boardWrap">
+      <div id="board"></div>
+      <div id="pieceLayer"></div>
+      <div id="fx"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="actionBar">
+    <div id="status" aria-live="polite"></div>
+    <div id="hint" class="note"></div>
+    <div id="tossRow">
+      <div id="tossCowries"></div>
+      <div id="tossResult" aria-live="polite"></div><button id="muteBtn" aria-label="Sound is on" title="Sound on/off">🔊</button>
+    </div>
+    <div id="chooser" style="display:none"></div>
+  </section>
+
+  <section class="panel"><div id="players"></div></section>
+
+  <section class="panel">
+    <strong>Game Log</strong>
+    <div id="log"></div>
+  </section>
+
+  <section class="panel note">
+    Toss: 0 open = 8 (ASHTO · અષ્ટો) · 1 = 1 · 2 = 2 · 3 = 3 · 4 = 4 (CHOKKO · ચોક્કો).
+    ભગવાનના (Bhagwan-na): each player's first toss is dedicated to God and moves nothing.
+    A toss of 8 also earns a 1-step પઘડી (PAGHADI), taken before or after the 8.
+    A 4 or 8 may be accumulated (ભેગું કરો): each toss becomes an indivisible unit in the bank,
+    and each unit (or a club of units) pays for ONE whole move. Three SAME-value 4s (or 8s) in
+    a row burn the turn (બળી ગયા): the game rolls back to before the streak.
+    Cowries wait on their home house (coloured ring); green crossed houses are safe for everyone.
+  </section>
+
+</main>
+
+<div id="modal" style="display:none"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-database-compat.js"></script>
+<script>
+"use strict";
+
+/* ===================================================================
+   CONFIG — rule choices that were not fully specified in the rules.
+   Each can be changed here without touching any other code.
+   =================================================================== */
+
+// 5x5 board, copied from the original sketch. Route numbers are internal only.
+const GRID = [
+  [10,  9,  8,  7,  6],
+  [11, 18, 19, 20,  5],
+  [12, 17, 24, 21,  4],
+  [13, "16B", 23, 22, 3],
+  [14, 15, "16A", 1, 2]
+].map(row => row.map(String));
+
+// The X / crossed houses (safe for everyone). 24 is the final house.
+const SAFE_HOUSES = ["4", "8", "12", "16A", "24"];
+
+// Which board sides are used. Each seat is a 90-degree rotation of seat 0.
+// 2 players sit opposite each other.
+const SEATS = { 2: [0, 2], 3: [0, 1, 2], 4: [0, 1, 2, 3] };
+
+// "uniform": 0..4 open are equally likely (as in the original prototype).
+// "cowries": four fair cowries, so 0 open (8) and 4 open are rare (1 in 16 each).
+const TOSS_MODEL = "uniform";
+
+// Bhagwan-na: every player's FIRST toss is dedicated to God. No cowrie moves and nothing
+// is earned. From each player's 2nd toss onward the real game starts.
+// true: a 4 or an 8 on that dedicated toss still gives an extra toss.
+const GOD_TOSS_4_OR_8_GIVES_EXTRA_TURN = false;
+
+// After Tod Malyo a cowrie goes inside by default: at the turn-in point there is no outer
+// alternative, so no choice is asked. false = ask inner / outer instead (inner listed first).
+const TOD_GOES_INSIDE_BY_DEFAULT = true;
+
+// This many SAME-VALUE 4s / 8s in a row (e.g. 4,4,4 or 8,8,8 — a mix does not count) burn the
+// turn: બળી ગયા. On a burn the whole game rolls back to the state before the streak began
+// (captures and centre reaches made during the streak are undone), then the turn passes.
+const GRACE_LIMIT = 3;
+
+// A toss of 4 or 8 always gives an extra toss, even when it has no legal move.
+// (An unplayable 8 also still earns its 1-step bonus.) false = the turn passes instead.
+const EXTRA_TURN_ON_UNPLAYABLE_4_OR_8 = true;
+
+/* ENGINE-START ======================================================
+   Pure game logic. No DOM access, so it can be tested on its own.
+   ================================================================== */
+
+const SAFE = new Set(SAFE_HOUSES);
+const CENTER = "24";
+
+// Seat 0 reference route (as in the rules document).
+const OUTER0 = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16A"];
+const INNER0 = ["16B","17","18","19","20","21","22","23","24"];
+
+const COORD = {};
+GRID.forEach((row, r) => row.forEach((id, c) => { COORD[id] = [r, c]; }));
+
+// Rotate a house 90 degrees anticlockwise about the centre, k times.
+function rotId(id, k) {
+  let [r, c] = COORD[id];
+  for (let i = 0; i < k; i++) { const nr = 4 - c, nc = r; r = nr; c = nc; }
+  return GRID[r][c];
+}
+
+// ROUTES[seat] = { outer: 16 houses (anticlockwise), inner: 9 houses (clockwise, ends at 24) }
+const ROUTES = [0, 1, 2, 3].map(k => ({
+  outer: OUTER0.map(id => rotId(id, k)),
+  inner: INNER0.map(id => rotId(id, k))
+}));
+
+let rand = Math.random;
+function setRand(fn) { rand = fn; }
+
+function rollToss() {
+  let faces;
+  if (TOSS_MODEL === "cowries") {
+    faces = [0, 1, 2, 3].map(() => rand() < 0.5);
+  } else {
+    const open = Math.floor(rand() * 5);
+    const order = [0, 1, 2, 3];
+    for (let i = 3; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    faces = [false, false, false, false];
+    order.slice(0, open).forEach(i => { faces[i] = true; });
+  }
+  const open = faces.filter(Boolean).length;
+  return { open, value: open === 0 ? 8 : open, faces };
+}
+
+function newGameState(n) {
+  return {
+    n,
+    players: SEATS[n].map((seat, i) => ({
+      idx: i, seat, tod: false, rank: null, godTossDone: false,
+      // state: 'home' | 'outer' | 'inner' | 'done'   pos: index along that route
+      pieces: [0, 1, 2, 3].map(id => ({ id, state: "home", pos: 0 })),
+      graceStreak: 0, graceVal: null, graceSnap: null
+    })),
+    current: 0, toss: null, over: false, nextRank: 1,
+    // Accumulated (ભેગા કરેલા) units from 4s/8s. Each unit is indivisible: it must be spent
+    // as ONE whole move (cost = g × steps). Units may be clubbed (summed) to pay for a move.
+    bank: 0, bankParts: []
+  };
+}
+
+function cellOf(game, pIdx, pc) {
+  const P = game.players[pIdx];
+  return (pc.state === "outer" || pc.state === "inner") ? ROUTES[P.seat][pc.state][pc.pos] : null;
+}
+
+// All ways to walk `steps` houses. A player with Tod Malyo may turn into the inner route
+// straight from the house just before home, without stepping on home first (so going
+// inside costs no extra step), or from home itself when the move starts there.
+// The inner option is generated first so it is listed first.
+function walk(ring, pos, steps, tod, path, out) {
+  if (steps === 0) { out.push({ ring, pos, path }); return; }
+  if (ring === "outer") {
+    const turnIn = tod && (pos === 14 || (pos === 15 && path.length === 0));
+    if (turnIn) walk("inner", 0, steps - 1, tod, path.concat([{ ring: "inner", pos: 0 }]), out);
+    if (turnIn && TOD_GOES_INSIDE_BY_DEFAULT) return;     // inside by default: no outer alternative
+    const next = pos < 15 ? pos + 1 : 0;
+    walk("outer", next, steps - 1, tod, path.concat([{ ring: "outer", pos: next }]), out);
+  } else if (pos < 8) {
+    walk("inner", pos + 1, steps - 1, tod, path.concat([{ ring: "inner", pos: pos + 1 }]), out);
+  }
+  // inner route: moving past 24 is not allowed (dead end -> no result)
+}
+
+function legalMoves(game, pIdx, toss) {
+  const P = game.players[pIdx];
+  const moves = [];
+
+  // Leaving home. Cowries wait on the player's home house: the crossed (X) house in the
+  // middle of their side, where the outer lap also ends (16A, 4, 8, 12). They move out from
+  // there, so the first step lands on the first numbered house of the route. Any toss will
+  // do. A group of g cowries may leave together if the toss divides by g, moving toss/g houses.
+  const homeCount = P.pieces.filter(p => p.state === "home").length;
+  for (let g = 1; g <= Math.min(4, homeCount); g++) {
+    if (toss % g) continue;
+    const steps = toss / g, path = [];
+    for (let i = 0; i < steps; i++) path.push({ ring: "outer", pos: i });
+    moves.push({ kind: "enter", g, steps, from: null, to: { ring: "outer", pos: steps - 1 }, path });
+  }
+
+  // Cowries already on the board, grouped by house.
+  const spots = new Map();
+  P.pieces.forEach(pc => {
+    if (pc.state === "outer" || pc.state === "inner") {
+      const k = pc.state + ":" + pc.pos;
+      if (!spots.has(k)) spots.set(k, { ring: pc.state, pos: pc.pos, n: 0 });
+      spots.get(k).n++;
+    }
+  });
+  spots.forEach(s => {
+    const cell = ROUTES[P.seat][s.ring][s.pos];
+    // A stack moves together, except on an X house where its cowries may move independently.
+    const sizes = [];
+    if (SAFE.has(cell)) { for (let g = 1; g <= s.n; g++) sizes.push(g); } else sizes.push(s.n);
+    sizes.forEach(g => {
+      if (toss % g) return;
+      const steps = toss / g, outs = [];
+      walk(s.ring, s.pos, steps, P.tod, [], outs);
+      outs.forEach(o => moves.push({
+        kind: "move", g, steps, from: { ring: s.ring, pos: s.pos },
+        to: { ring: o.ring, pos: o.pos }, path: o.path
+      }));
+    });
+  });
+  return moves;
+}
+
+// Applies a chosen move to the game state and reports everything that happened.
+function applyMove(game, pIdx, move, preferId, noTossExtras) {
+  const P = game.players[pIdx];
+  let pool = (move.kind === "enter")
+    ? P.pieces.filter(p => p.state === "home")
+    : P.pieces.filter(p => p.state === move.from.ring && p.pos === move.from.pos);
+  pool = pool.slice().sort((a, b) => ((b.id === preferId) - (a.id === preferId)) || (a.id - b.id));
+  const moving = pool.slice(0, move.g);
+
+  const res = {
+    moving: moving.map(p => p.id), captured: [], reachedIds: [], todGained: false,
+    natod: [], extraReasons: [], extra: false, finished: false, rank: null,
+    gameOver: false, lastRank: null, bonus: false
+  };
+  const destCell = ROUTES[P.seat][move.to.ring][move.to.pos];
+
+  // Capture rules (checked before the move changes anything).
+  const victims = [];
+  if (destCell !== CENTER && !SAFE.has(destCell)) {
+    const present = [];
+    game.players.forEach(Q => {
+      const ids = Q.pieces.filter(pc => cellOf(game, Q.idx, pc) === destCell).map(pc => pc.id);
+      if (ids.length) present.push({ q: Q.idx, ids });
+    });
+    const stackPresent = present.some(o => o.ids.length >= 2);
+    present.forEach(o => {
+      if (o.q === pIdx) return;
+      if (move.g === 1) { if (!stackPresent && o.ids.length === 1) victims.push(o); }
+      else if (o.ids.length === move.g) victims.push(o); // equal-sized stacks capture each other
+    });
+  }
+
+  moving.forEach(p => { p.state = move.to.ring; p.pos = move.to.pos; });
+
+  if (destCell === CENTER) {
+    moving.forEach(p => { p.state = "done"; p.pos = 8; });
+    res.reachedIds = moving.map(p => p.id);
+    res.extraReasons.push("reaching the centre");
+  }
+
+  victims.forEach(v => {
+    const Q = game.players[v.q];
+    v.ids.forEach(id => { Q.pieces[id].state = "home"; Q.pieces[id].pos = 0; });
+    res.captured.push({ pIdx: v.q, ids: v.ids.slice(), cell: destCell });
+  });
+  if (victims.length) {
+    res.extraReasons.push("capture");
+    if (!P.tod) { P.tod = true; res.todGained = true; }                       // Tod Malyo
+    victims.forEach(v => {                                                      // Natod Thaya
+      const Q = game.players[v.q];
+      if (Q.tod && Q.pieces.every(pc => pc.state === "home")) { Q.tod = false; res.natod.push(v.q); }
+    });
+  }
+
+  if (!noTossExtras) {
+    if (game.toss === 8) res.extraReasons.push("Ashto (8)");
+    if (game.toss === 4) res.extraReasons.push("Chokko (4)");
+  }
+
+  if (P.rank === null && P.pieces.every(pc => pc.state === "done")) {
+    P.rank = game.nextRank++; res.finished = true; res.rank = P.rank;
+  }
+  const finishedCount = game.players.filter(q => q.rank !== null).length;
+  if (finishedCount >= game.n - 1) {
+    const last = game.players.find(q => q.rank === null);
+    if (last) { last.rank = game.nextRank++; res.lastRank = { pIdx: last.idx, rank: last.rank }; }
+    game.over = true; res.gameOver = true;
+  }
+  res.extra = res.extraReasons.length > 0 && P.rank === null && !game.over;
+  // A toss of 8 also earns one extra step (any cowrie, player's choice) after the 8 is played.
+  res.bonus = !noTossExtras && game.toss === 8 && P.rank === null && !game.over;
+  return res;
+}
+
+function nextActivePlayer(game, from) {
+  for (let k = 1; k <= game.n; k++) {
+    const i = (from + k) % game.n;
+    if (game.players[i].rank === null) return i;
+  }
+  return from;
+}
+
+// Bhagwan-na: a player's first toss is dedicated to God. No cowrie moves.
+// Returns null if this is not the player's first toss, otherwise { extra }.
+function godToss(game, pIdx, toss) {
+  const P = game.players[pIdx];
+  if (P.godTossDone) return null;
+  P.godTossDone = true;
+  return { extra: GOD_TOSS_4_OR_8_GIVES_EXTRA_TURN && (toss === 4 || toss === 8) };
+}
+
+// Snapshot / restore for the burn rule: if GRACE_LIMIT same-value 4s/8s are thrown in a row,
+// the game is rolled back to the state captured when the streak began.
+function snapshotGame(g) {
+  try { return JSON.stringify(g); } catch (e) { return null; }
+}
+function restoreGame(g, snap) {
+  if (!snap) return false;
+  try {
+    const s = JSON.parse(snap);
+    Object.keys(s).forEach(k => { g[k] = s[k]; });
+    return true;
+  } catch (e) { return false; }
+}
+
+// Only same-value 4s/8s build a streak (4,8,4 does NOT burn). A normal toss resets it.
+// Returns { burnt }. Call for every real toss (not the God toss).
+function registerToss(game, pIdx, toss) {
+  const P = game.players[pIdx];
+  if (toss === 4 || toss === 8) {
+    if (P.graceVal !== toss) {
+      P.graceVal = toss;
+      P.graceStreak = 1;
+      P.graceSnap = snapshotGame(game);        // state before this streak began
+    } else {
+      P.graceStreak++;
+    }
+    if (P.graceStreak >= GRACE_LIMIT) return { burnt: true };
+  } else {
+    P.graceVal = null; P.graceStreak = 0; P.graceSnap = null;
+  }
+  return { burnt: false };
+}
+
+// Early finish: exactly two players are left, one has every cowrie inside (out of reach) and the
+// other has no Tod, so the other can never capture anything and can never come inside.
+function earlyWinCandidate(game) {
+  if (game.over) return null;
+  const alive = game.players.filter(p => p.rank === null);
+  if (alive.length !== 2) return null;
+  for (const A of alive) {
+    const B = alive[0] === A ? alive[1] : alive[0];
+    const inside = A.pieces.every(pc => pc.state === "inner" || pc.state === "done") && A.pieces.some(pc => pc.state === "inner");
+    if (inside && !B.tod) return { winner: A.idx, loser: B.idx };
+  }
+  return null;
+}
+function declareEarlyWinner(game, winnerIdx) {
+  const A = game.players[winnerIdx];
+  const B = game.players.find(p => p.rank === null && p !== A);
+  A.rank = game.nextRank++;
+  if (B) B.rank = game.nextRank++;
+  game.over = true;
+}
+
+function rankLabel(r, n) {
+  if (r === 1) return "THE WINNER!";
+  if (r === n) return "Last / Lost";
+  return r === 2 ? "2nd Place" : r === 3 ? "3rd Place" : r + "th Place";
+}
+/* ENGINE-END ======================================================== */
+"use strict";
+/* ========================= ONLINE LAYER =========================
+   Host-authoritative multiplayer, modelled on the THO card game:
+   - The host runs the pure engine (above) and publishes the full public
+     state to Firebase Realtime Database (this game has no hidden hands).
+   - Clients render the published state and send picks via a moves queue.
+   - Empty seats are filled by bots that play on the host.
+   ================================================================= */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAX5m89RteMsPy-yxuuR3O_M-f05vFPFTo",
+  authDomain: "megatron-9e4b1.firebaseapp.com",
+  databaseURL: "https://megatron-9e4b1-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "megatron-9e4b1",
+  storageBucket: "megatron-9e4b1.firebasestorage.app",
+  messagingSenderId: "500474004133",
+  appId: "1:500474004133:web:e4513a3dba53f79e71034c"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* ---------- shared helpers ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const COLORS = ["#b83c36", "#286ca9", "#39834e", "#884b9e"];
+const SYMS = ["●", "◆", "▲", "★"];
+const pause = ms => new Promise(r => setTimeout(r, ms));
+
+let room = null, myId = "p-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+let isHost = false, code = "", roomN = 4;
+let S = null;                 // last published state (all clients render this)
+let myIdx = -1;               // my seat index in the published state
+let lastEvt = 0, lastLogKey = "";
+
+/* host-side engine globals */
+let game = null, mode = "idle", curMoves = [], spendOpts = [], bonusCtx = null, ashto = null;
+let curOptions = [], curStatus = "", curFaces = [false, false, false, false], curLabel = "";
+let pickBy = 0, pending = null, pendingKind = null, evtObj = null, evtSeq = 0;
+let curLegalPieces = [], winEvtDone = false, curAnim = null, curCap = null, curCeleb = null;
+let logs = [];
+
+/* ---------- client-side sound (small subset) ---------- */
+let actx = null, muted = false;
+try { muted = localStorage.getItem("ashto_muted") === "1"; } catch (e) {}
+function audio() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    actx = actx || new AC();
+    if (actx.state === "suspended") actx.resume();
+  } catch (e) { return null; }
+  return actx;
+}
+function tone(f, dur, type, vol, delay) {
+  if (muted) return;
+  const a = audio(); if (!a) return;
+  const t = a.currentTime + (delay || 0);
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type || "sine";
+  o.frequency.setValueAtTime(f, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol || 0.12, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(a.destination);
+  o.start(t); o.stop(t + dur + 0.03);
+}
+function playSnd(kind) {
+  if (kind === "oops") { tone(400, 0.15, "sawtooth", 0.12); tone(300, 0.22, "sawtooth", 0.12, 0.15); }
+  else if (kind === "fun") { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.16, "square", 0.08, i * 0.09)); }
+  else if (kind === "win") { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.2, "triangle", 0.1, i * 0.11)); }
+  else tone(880, 0.07, "square", 0.08);
+}
+function updateMuteBtn() {
+  $("muteBtn").textContent = muted ? "🔇" : "🔊";
+  $("muteBtn").setAttribute("aria-label", muted ? "Sound is off" : "Sound is on");
+}
+document.addEventListener("click", () => audio(), { passive: true });
+
+/* ---------- lobby ---------- */
+const myName = () => ($("myName").value.trim() || "Player").slice(0, 14);
+function show(id) { ["home", "lobby", "gameWrap"].forEach(x => $(x).style.display = x === id ? "block" : "none"); }
+
+function createRoom() {
+  isHost = true; roomN = Number($("numPlayers").value);
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  code = Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  room = db.ref("rooms/A-" + code);
+  room.set({ n: roomN, started: false, players: { [myId]: myName() }, createdAt: Date.now() })
+    .catch(e => alert("Could not create room / રૂમ બનાવી શકાયો નહીં:\n" + e.message));
+  attachRoomListener(); showLobby();
+}
+function joinRoom() {
+  code = $("roomCode").value.trim().toUpperCase(); if (!code) return;
+  isHost = false; room = db.ref("rooms/A-" + code);
+  room.once("value").then(snap => {
+    const val = snap.val();
+    if (!val) { alert("Room not found / રૂમ મળ્યો નહીં"); return; }
+    if (val.started) { alert("Game already started / રમત શરૂ થઈ ગઈ છે"); return; }
+    room.child("players/" + myId).set(myName())
+      .catch(e => alert("Could not join / જોડાઈ શકાયું નહીં:\n" + e.message));
+    attachRoomListener(); showLobby();
+  }).catch(e => alert("Could not reach the server / સર્વર સુધી પહોંચી શકાયું નહીં:\n" + e.message));
+}
+function showLobby() {
+  show("lobby"); $("lobbyName").value = myName(); $("codeBig").innerText = code;
+  const link = location.href.split("?")[0].split("#")[0] + "?room=" + code;
+  $("linkTxt").innerText = link;
+  $("waBtn").href = "https://wa.me/?text=" + encodeURIComponent("🐚 Come play Ashto Paghadi (અષ્ટોપઘડી) online!\nRoom code: " + code + "\n" + link);
+  $("startBtn").style.display = isHost ? "inline-block" : "none";
+  $("waitMsg").style.display = isHost ? "none" : "block";
+}
+function renderLobby(names, n) {
+  $("lobbyList").innerHTML = names.map(x => '<div class="seat">' + esc(x) + "</div>").join("") +
+    '<div class="note">' + names.length + "/" + n + " joined · " + Math.max(0, n - names.length) + " bot(s) fill the rest / બાકીની બેઠકો બોટથી ભરાશે</div>";
+}
+function renameMe() {
+  const v = $("lobbyName").value.trim().slice(0, 14); if (!v || !room) return;
+  room.child("players/" + myId).set(v);
+}
+
+let lobbySeen = false;
+function attachRoomListener() {
+  room.on("value", snap => {
+    const val = snap.val(); if (!val) return;
+    roomN = val.n;
+    if (!val.started) { lobbySeen = true; renderLobby(Object.values(val.players || {}), roomN); return; }
+    show("gameWrap");
+    if (val.state) { S = val.state; resolveMyIdx(); render(); }
+  }, e => alert("Connection error / જોડાણ ભૂલ:\n" + e.message));
+  if (isHost) {
+    room.child("moves").on("child_added", snap => {
+      const d = snap.val(), key = snap.key;
+      room.child("moves/" + key).remove();
+      hostOnMove(d);
+    }, e => alert("Moves listener error / ભૂલ:\n" + e.message));
+  }
+}
+function resolveMyIdx() {
+  myIdx = -1;
+  if (!S || !S.ids) return;
+  for (let k = 0; k < S.ids.length; k++) if (S.ids[k] === myId) { myIdx = k; break; }
+}
+function sendMove(m) { if (room) room.child("moves").push(Object.assign({ cid: myId }, m)); }
+
+/* ---------- host: publishing ---------- */
+function who(i) { return (game && game.players[i] && game.players[i].name) || "Player " + (i + 1); }
+function log(m) { logs.unshift(m); logs = logs.slice(0, 10); }
+function evtBanner(t1, t2, cls, snd) { evtObj = { id: ++evtSeq, t1, t2, cls: cls || "good", snd: snd || "fun" }; if (cls === "win") winEvtDone = true; }
+function evtPop(msg, snd) { evtObj = { id: ++evtSeq, msg, snd: snd || "ok" }; }
+
+function pubState() {
+  return {
+    ids: game.players.map((p, i) => p.cid || ("bot-" + i)),
+    players: game.players.map(p => ({ name: p.name, seat: p.seat, tod: p.tod, rank: p.rank, pieces: p.pieces, bot: !!p.isBot })),
+    current: game.current, over: game.over, n: game.n,
+    bank: game.bank, bankParts: game.bankParts,
+    mode, status: curStatus, pickBy,
+    anim: curAnim,
+    capShow: curCap,
+    celebIds: curCeleb,
+    earlyWin: game.earlyWinPending || null,
+    legalPieces: curLegalPieces, bonusFirst: mode === "select" && bonusFirstAvailable(),
+    tossFaces: curFaces.map(b => b ? 1 : 0), tossLabel: curLabel,
+    options: curOptions, log: logs, evt: evtObj
+  };
+}
+function pub() {
+  S = pubState(); resolveMyIdx(); render();
+  if (room) room.update({ state: S }).catch(() => {});
+}
+
+/* ---------- host: waiting for a pick ---------- */
+function offer(options, m, status, byIdx) {
+  return new Promise(res => {
+    curOptions = options; mode = m; curStatus = status;
+    pickBy = (byIdx !== undefined) ? byIdx : game.current;
+    pendingKind = "option"; pending = res;
+    pub();
+    const P = game.players[pickBy];
+    if (P.isBot) {
+      const d = 1200 + Math.floor(rand() * 1400);
+      setTimeout(() => { if (pending) { const i = Math.floor(rand() * options.length); const r = pending; pending = null; pendingKind = null; r(options[i]); } }, d);
+    }
+  });
+}
+// Wait for the picking player to tap a glowing cowrie, or (bots) pick one themselves.
+function waitInput() {
+  return new Promise(res => {
+    pendingKind = "input"; pending = res;
+    const P = game.players[pickBy];
+    if (P && P.isBot) {
+      setTimeout(() => {
+        if (!pending) return;
+        if (bonusFirstAvailable() && rand() < 0.25) { const r = pending; pending = null; pendingKind = null; r({ bonusFirst: true }); return; }
+        if (!curLegalPieces.length) return;
+        const k = curLegalPieces[Math.floor(rand() * curLegalPieces.length)];
+        const r = pending; pending = null; pendingKind = null; r({ piece: Number(k.split("-")[1]) });
+      }, 1200 + Math.floor(rand() * 1400));
+    }
+  });
+}
+function legalPieceIds(pIdx, moveList) {
+  const P = game.players[pIdx], ids = new Set();
+  moveList.forEach(m => {
+    if (m.kind === "enter") P.pieces.forEach(pc => { if (pc.state === "home") ids.add(pc.id); });
+    else P.pieces.forEach(pc => {
+      if ((pc.state === "outer" || pc.state === "inner") && pc.state === m.from.ring && pc.pos === m.from.pos) ids.add(pc.id);
+    });
+  });
+  return Array.from(ids).sort((a, b) => a - b);
+}
+// Select mode: tap a glowing cowrie; if it has several ways to move, a chooser appears.
+async function selectMove(pIdx) {
+  for (;;) {
+    curMoves = legalMoves(game, pIdx, game.toss);
+    if (!curMoves.length) {
+      log(who(pIdx) + ": no legal move for " + game.toss + ".");
+      await pause(1000);
+      return null;
+    }
+    curLegalPieces = legalPieceIds(pIdx, curMoves).map(id => pIdx + "-" + id);
+    // A player's LAST cowrie in play moves by itself (when there is exactly one way).
+    const left = game.players[pIdx].pieces.filter(pc => pc.state !== "done");
+    if (left.length === 1 && curMoves.length === 1 && !bonusFirstAvailable()) {
+      curStatus = who(pIdx) + ": last cowrie — moving automatically.";
+      pub();
+      await pause(750);
+      return { mi: 0 };
+    }
+    mode = "select"; curOptions = []; pickBy = pIdx;
+    curStatus = who(pIdx) + " tossed " + game.toss + ". Tap a glowing cowrie.";
+    pub();
+    const input = await waitInput();
+    if (input.declared || game.over) throw DECLARED;
+    if (input.bonusFirst) return { bonusFirst: true };
+    const pc = game.players[pIdx].pieces[input.piece];
+    const opts = curMoves.filter(m => m.kind === "enter" ? pc.state === "home"
+      : (pc.state === m.from.ring && pc.pos === m.from.pos));
+    if (!opts.length) continue;
+    if (opts.length === 1) return { mi: curMoves.indexOf(opts[0]) };
+    const olist = opts.map(m => ({ label: describe(m, opts), act: "move", mi: curMoves.indexOf(m) }));
+    olist.push({ label: "Cancel", act: "cancel" });
+    const c = await pick(olist, "select", "Choose how to move:", pIdx);
+    if (c.act === "cancel") continue;
+    return c;
+  }
+}
+// Spend mode: same tap-to-select flow over the banked-step options.
+async function spendSelect(pIdx) {
+  for (;;) {
+    buildSpendOpts();
+    if (!spendOpts.length) return null;
+    curLegalPieces = legalPieceIds(pIdx, spendOpts.map(o => o.m)).map(id => pIdx + "-" + id);
+    const left = game.players[pIdx].pieces.filter(pc => pc.state !== "done");
+    if (left.length === 1 && spendOpts.length === 1) {
+      curStatus = who(pIdx) + ": last cowrie — spending automatically.";
+      pub();
+      await pause(750);
+      return { oi: 0 };
+    }
+    mode = "spend"; curOptions = []; pickBy = pIdx;
+    curStatus = who(pIdx) + ": spend " + game.bank + " banked step(s) — units: " + game.bankParts.join(" + ") + ". Tap a glowing cowrie.";
+    pub();
+    const input = await waitInput();
+    if (input.declared || game.over) throw DECLARED;
+    const pc = game.players[pIdx].pieces[input.piece];
+    const opts = spendOpts.filter(o => o.m.kind === "enter" ? pc.state === "home"
+      : (pc.state === o.m.from.ring && pc.pos === o.m.from.pos));
+    if (!opts.length) continue;
+    if (opts.length === 1) return { oi: spendOpts.indexOf(opts[0]) };
+    const olist = opts.map(o => ({ label: spendDesc(o), act: "spend", oi: spendOpts.indexOf(o) }));
+    olist.push({ label: "Cancel", act: "cancel" });
+    const c = await pick(olist, "spend", "Choose how to spend:", pIdx);
+    if (c.act === "cancel") continue;
+    return c;
+  }
+}
+
+// offer() + abort if the game gets declared over while waiting.
+const DECLARED = {};
+async function pick(options, m, status, byIdx) {
+  const r = await offer(options, m, status, byIdx);
+  if ((r && r.act === "declared") || game.over) throw DECLARED;
+  return r;
+}
+
+function hostOnMove(d) {
+  if (!d || !pending || !game) return;
+  if (pickBy < 0 || pickBy >= game.players.length) return;
+  if (d.cid !== game.players[pickBy].cid) return;
+  let r = null;
+  if (d.type === "pick") {
+    if (pendingKind !== "option") return;          // a chooser pick is only valid while a chooser is open
+    const idx = d.idx | 0;
+    if (idx >= 0 && idx < curOptions.length) r = curOptions[idx];   // resolve with the option itself
+  } else if (d.type === "pickPiece") {
+    if (pendingKind !== "input") return;           // ignore cowrie taps while chooser buttons are shown
+    const id = d.id | 0;
+    if (curLegalPieces.indexOf(pickBy + "-" + id) >= 0) r = { piece: id };
+  } else if (d.type === "bonusFirst") {
+    if (pendingKind !== "input") return;
+    if (bonusFirstAvailable()) r = { bonusFirst: true };
+  } else if (d.type === "declare") {
+    const ew = game.earlyWinPending;
+    if (ew && !game.over && (d.cid === game.players[ew.w].cid || d.cid === game.players[ew.l].cid)) {
+      declareEarlyWinner(game, ew.w);
+      const rk = game.players[ew.w].rank;
+      log(who(ew.w) + " — " + rankLabel(rk, game.n) + " (declared early; " + who(ew.l) + " is Natod).");
+      if (rk === 1) evtBanner("🏆 THE WINNER!", who(ew.w), "win");
+      else evtBanner(rankLabel(rk, game.n), who(ew.w), "place");
+      pub();
+      if (pending) { const res2 = pending; pending = null; pendingKind = null; res2({ act: "declared" }); }
+    }
+    return;
+  }
+  if (r) { const res = pending; pending = null; pendingKind = null; res(r); }
+}
+
+/* ---------- host: shared move description ---------- */
+function describe(m, opts) {
+  const unit = m.steps === 1 ? "cell" : "cells";
+  const who1 = m.kind === "enter"
+    ? (m.g === 1 ? "Bring out 1" : "Bring out " + m.g + " together")
+    : (m.g === 1 ? "Move 1" : "Move " + m.g + " together");
+  let s = who1 + " · " + m.steps + " " + unit;
+  if (opts.some(o => o !== m && o.g === m.g && o.steps === m.steps)) {
+    s += m.to.ring === "inner" ? " · inner route" : " · outer route";
+  }
+  return s;
+}
+function bonusFirstAvailable() {
+  return !!(mode === "select" && game && !game.over && game.toss === 8 &&
+    ashto && !ashto.bonusUsed && ashto.phase === null &&
+    legalMoves(game, game.current, 1).length > 0);
+}
+function buildSpendOpts() {
+  spendOpts = [];
+  const parts = game.bankParts, n = parts.length;
+  const seen = new Set();
+  for (let mask = 1; mask < (1 << n); mask++) {
+    let v = 0; const used = [];
+    for (let i = 0; i < n; i++) if (mask & (1 << i)) { v += parts[i]; used.push(i); }
+    legalMoves(game, game.current, v).forEach(m => {
+      const key = m.kind + ":" + (m.from ? m.from.ring + m.from.pos : "H") + ":" +
+        m.to.ring + m.to.pos + ":" + m.g + ":" + m.steps;
+      if (seen.has(key)) return;
+      seen.add(key);
+      spendOpts.push({ m, cost: v, parts: used.map(i => parts[i]) });
+    });
+  }
+}
+function spendDesc(o) {
+  const club = o.parts.length > 1 ? " (" + o.parts.join("+") + ")" : "";
+  return describe(o.m, spendOpts.map(x => x.m)) + " · cost " + o.cost + club;
+}
+
+/* ---------- host: performing a move ---------- */
+async function performMove(move, noTossExtras) {
+  const pIdx = game.current, P = game.players[pIdx];
+  const res = applyMove(game, pIdx, move, null, noTossExtras);
+  if (ashto && ashto.pendingExtra) {
+    ashto.pendingExtra.reasons.forEach(r => { if (!res.extraReasons.includes(r)) res.extraReasons.push(r); });
+    if (ashto.pendingExtra.extra) res.extra = true;
+    ashto.pendingExtra = null;
+  }
+  log(who(pIdx) + ": " + describe(move, [move]) + ".");
+  mode = "anim"; curOptions = [];
+  curCap = res.captured.length ? res.captured : null;   // victims stay on the cell until the mover arrives
+  curStatus = who(pIdx) + " is moving..."; pub();
+  // hop one cell at a time so every client sees the walk, not a jump
+  for (let i = 0; i < move.path.length; i++) {
+    curAnim = { ids: res.moving.map(id => pIdx + "-" + id), ring: move.path[i].ring, pos: move.path[i].pos };
+    pub();
+    await pause(i === 0 && move.kind === "enter" ? 340 : 250);
+  }
+  if (res.reachedIds.length) {           // celebrate a moment on the centre house
+    curAnim = { ids: res.reachedIds.map(id => pIdx + "-" + id), ring: "inner", pos: 8 };
+    curCeleb = res.reachedIds.map(id => pIdx + "-" + id);
+    pub();
+    await pause(1300);
+    curCeleb = null;
+  }
+  curAnim = null;
+  if (res.captured.length) {
+    evtBanner("CAPTURED!", "CAPTURED! · " + who(pIdx), "bad", "oops");
+    res.captured.forEach(c => log(who(pIdx) + " captured " + who(c.pIdx) + "'s " + c.ids.length + (c.ids.length > 1 ? " cowries" : " cowrie") + "!"));
+    pub();
+    await pause(1400);
+  }
+  curCap = null;
+  pub();
+  await pause(150);
+
+  if (res.reachedIds.length) {
+    log(who(pIdx) + " reached the centre with " + res.reachedIds.length + " cowrie(s)!");
+  }
+  if (res.todGained) {
+    log(who(pIdx) + ": તોડ મળ્યો — TOD MALYO! Inner route unlocked.");
+    evtBanner("તોડ મળ્યો!", "TOD MALYO! · " + who(pIdx), "good");
+  }
+  for (const q of res.natod) {
+    log(who(q) + ": નતોડ થયા — NATOD THAYA! Tod lost.");
+    evtBanner("નતોડ થયા", "NATOD THAYA! · " + who(q), "bad");
+  }
+  if (res.finished) {
+    const lab = rankLabel(res.rank, game.n);
+    log(who(pIdx) + " — " + lab);
+    if (res.rank === 1) evtBanner("🏆 THE WINNER!", who(pIdx), "win");
+    else evtBanner(lab, who(pIdx), "place");
+  }
+  pub();
+  return res;
+}
+
+/* ---------- host: the early-win question ---------- */
+async function maybeEarlyWin(pIdx) {
+  if (game.over) return true;
+  if (game.earlyWinPending) return false;   // already continuing — the Declare button is available
+  const c = earlyWinCandidate(game); if (!c) return false;
+  log(who(c.winner) + " is the winner — " + who(c.loser) + " is Natod.");
+  evtPop("🏆 " + who(c.winner) + " is the winner — " + who(c.loser) + " is Natod (નતોડ). Continue?", "win");
+  const ans = await pick(
+    [{ label: "Y · હા, ચાલુ રાખો · Yes, continue", act: "yes" }, { label: "N · ના, વિજેતા જાહેર કરો · No, declare the winner", act: "no" }],
+    "ask",
+    who(c.winner) + " is the winner — " + who(c.loser) + " decides: continue?",
+    c.loser
+  );
+  if (ans.act === "yes") {
+    game.earlyWinPending = { w: c.winner, l: c.loser };
+    log("The game continues — " + who(c.winner) + " may clear all cowries; the win can be declared anytime.");
+    pub();
+    return false;
+  }
+  declareEarlyWinner(game, c.winner);
+  const r = game.players[c.winner].rank;
+  log(who(c.winner) + " — " + rankLabel(r, game.n) + " (declared early; " + who(c.loser) + " is Natod).");
+  if (r === 1) evtBanner("🏆 THE WINNER!", who(c.winner), "win");
+  else evtBanner(rankLabel(r, game.n), who(c.winner), "place");
+  pub();
+  return true;
+}
+
+/* ---------- host: spending the bank ---------- */
+async function spendPhase(pIdx) {
+  for (;;) {
+    const c = await spendSelect(pIdx);
+    if (!c) {
+      log(who(pIdx) + ": the banked " + game.bank + " step(s) cannot be spent — lost.");
+      evtPop("Bank lost — no legal spend / બેંક બળી ગઈ", "oops");
+      game.bank = 0; game.bankParts = [];
+      await pause(1200);
+      return "end";
+    }
+    const o = spendOpts[c.oi];
+    const res = await performMove(o.m, true);
+    if (game.over) return "over";
+    o.parts.forEach(val => {
+      const i = game.bankParts.indexOf(val);
+      if (i >= 0) game.bankParts.splice(i, 1);
+    });
+    game.bank = game.bankParts.reduce((a, b) => a + b, 0);
+    log(who(pIdx) + " spent " + o.cost + " (" + o.parts.join(" + ") + ")" +
+      (game.bank ? " — " + game.bank + " left (" + game.bankParts.join(" + ") + ")." : " — bank empty."));
+    pub();
+    if (game.bank > 0) continue;
+    if (await maybeEarlyWin(pIdx)) return "over";
+    if (res.extra) { evtPop("Extra turn · capture", "ok"); return "extra"; }
+    return "end";
+  }
+}
+
+/* ---------- host: select & move (with પઘડી before/after the 8) ---------- */
+async function playPhase(pIdx) {
+  for (;;) {
+    const c = await selectMove(pIdx);
+    if (!c) return "end";
+    if (c.bonusFirst) {
+      ashto.phase = "first"; ashto.bonusUsed = true;
+      game.toss = 1;
+      log(who(pIdx) + " takes the પઘડી step first; the 8 comes after.");
+      evtPop("પઘડી (PAGHADI) 1st · then the 8", "ok");
+      continue;
+    }
+    const move = curMoves[c.mi];
+    const res = await performMove(move, false);
+    if (game.over) return "over";
+
+    // If the પઘડી was taken first, the 8 must still be played.
+    if (ashto && ashto.phase === "first") {
+      ashto.phase = null;
+      if (game.players[pIdx].rank === null) {
+        game.toss = 8;
+        if (legalMoves(game, pIdx, 8).length) {
+          ashto.pendingExtra = { extra: res.extra, reasons: res.extraReasons.slice() };
+          log(who(pIdx) + " now plays the 8.");
+          continue;
+        }
+        log(who(pIdx) + ": no legal move for the 8 after the પઘડી step.");
+        game.toss = 8;
+        if (EXTRA_TURN_ON_UNPLAYABLE_4_OR_8) { res.extra = true; res.extraReasons.push("Ashto (8)"); }
+      }
+    }
+
+    let extra = res.extra;
+    const reasons = res.extraReasons.slice();
+    if (bonusCtx) {
+      bonusCtx.reasons.forEach(r => { if (!reasons.includes(r)) reasons.push(r); });
+      extra = (extra || bonusCtx.extra) && game.players[pIdx].rank === null;
+      bonusCtx = null;
+    } else if (res.bonus && !(ashto && ashto.bonusUsed)) {
+      if (ashto) ashto.bonusUsed = true;
+      game.toss = 1;
+      if (legalMoves(game, pIdx, 1).length) {
+        bonusCtx = { extra, reasons: reasons.slice() };
+        log(who(pIdx) + " gets the પઘડી (PAGHADI): one extra step with any cowrie.");
+        evtPop("પઘડી (PAGHADI) · 1 step · any cowrie", "ok");
+        continue;
+      }
+      log(who(pIdx) + ": no legal move for the 1-step પઘડી.");
+    }
+
+    if (await maybeEarlyWin(pIdx)) return "over";
+    if (extra) {
+      log(who(pIdx) + " gets an extra turn — " + reasons.join(" + ") + ".");
+      evtPop("Extra turn · " + reasons.join(" + "), "ok");
+      return "extra";
+    }
+    return "end";
+  }
+}
+
+/* ---------- host: one toss and everything that follows ---------- */
+async function tossAndPlay(pIdx) {
+  // toss animation
+  mode = "anim"; curOptions = []; curLabel = "tossing..."; curFaces = [false, false, false, false];
+  curStatus = who(pIdx) + " is tossing the cowries..."; pub();
+  const t = rollToss();
+  game.toss = t.value;
+  await pause(1100);
+  curFaces = t.faces;
+  curLabel = t.value === 8 ? "8 · અષ્ટો! ASHTO!" : t.value === 4 ? "4 · ચોક્કો! CHOKKO!" : String(t.value);
+  log(who(pIdx) + " tossed " + t.value + " (" + t.open + " open).");
+  pub();
+
+  const gt = godToss(game, pIdx, t.value);
+  if (gt) {
+    evtBanner("ભગવાનના", "BHAGWAN-NA · offered to God", "good");
+    log(who(pIdx) + " tossed " + t.value + " — dedicated to God (ભગવાનના). No cowrie moves.");
+    await pause(1600);
+    if (gt.extra) { log(who(pIdx) + " gets an extra toss — the game starts now."); return "extra"; }
+    return "end";
+  }
+
+  const reg = registerToss(game, pIdx, t.value);
+  if (reg.burnt) {
+    const val = game.players[pIdx].graceVal;
+    log(who(pIdx) + ": બળી ગયા — " + GRACE_LIMIT + " × " + val + "s in a row. Roll back!");
+    evtBanner("બળી ગયા", "BURNT · " + GRACE_LIMIT + " × " + val + "s · roll back", "bad", "oops");
+    await pause(1800);
+    const snap = game.players[pIdx].graceSnap;
+    if (restoreGame(game, snap)) {
+      log("Game rolled back to before the " + val + "s streak — captures and centre reaches undone.");
+    }
+    bonusCtx = null; ashto = null;
+    pub();
+    await pause(600);
+    return "end";
+  }
+
+  if (t.value === 8) { evtBanner("અષ્ટો!", "ASHTO! · 8", "ashto"); await pause(1400); }
+  if (t.value === 4) { evtBanner("ચોક્કો!", "CHOKKO! · 4", "chokko"); await pause(1400); }
+
+  const v = t.value, paghadi = v === 8 ? 1 : 0;
+
+  // Already accumulating: every further toss joins the bank as a new unit.
+  if (game.bank > 0) {
+    game.bankParts.push(v);
+    if (v === 8) game.bankParts.push(1);
+    game.bank += v + paghadi;
+    log(who(pIdx) + " added " + (v + paghadi) + " to the bank — total " + game.bank + " (" + game.bankParts.join(" + ") + ").");
+    if (v === 4 || v === 8) {
+      const c = await pick(
+        [{ label: "🔁 Toss again", act: "tossAgain" }, { label: "▶ Spend " + game.bank + " now", act: "spendNow" }],
+        "choice", "Bank: " + game.bank + " (" + game.bankParts.join(" + ") + "). Toss again or spend?");
+      if (c.act === "tossAgain") return "extra";
+      const outA = await spendPhase(pIdx);
+      if (outA === "over") return "over";
+      return "extra";   // the 4/8 just tossed still earns its extra toss after spending
+    }
+    return await spendPhase(pIdx);
+  }
+
+  curMoves = legalMoves(game, pIdx, v);
+  if (v === 8) ashto = { bonusUsed: false, phase: null };
+
+  // 4 or 8 with a playable move: play now, or accumulate (ભેગું કરો).
+  if ((v === 4 || v === 8) && curMoves.length) {
+    const c = await pick([
+      { label: "▶ Play the " + v + " now", act: "playNow" },
+      { label: "➕ Accumulate " + (v + paghadi) + (v === 8 ? " (8 + પઘડી 1)" : "") + " · toss again", act: "acc" }
+    ], "choice", who(pIdx) + " tossed " + v + ". Play it now, or accumulate?");
+    if (c.act === "acc") {
+      game.bankParts = [v];
+      if (v === 8) game.bankParts.push(1);
+      game.bank = v + paghadi;
+      log(who(pIdx) + " banked " + game.bank + " step(s)" + (v === 8 ? " (8 + પઘડી 1)" : "") + ".");
+      const c2 = await pick(
+        [{ label: "🔁 Toss again", act: "tossAgain" }, { label: "▶ Spend " + game.bank + " now", act: "spendNow" }],
+        "choice", "Bank: " + game.bank + ". Toss again or spend now?");
+      if (c2.act === "tossAgain") return "extra";
+      const outB = await spendPhase(pIdx);
+      if (outB === "over") return "over";
+      return "extra";   // the accumulated 4/8 still earns its extra toss after spending
+    }
+    return await playPhase(pIdx);
+  }
+
+  if (!curMoves.length) {
+    if (v === 8) {
+      const bm = legalMoves(game, pIdx, 1);
+      const opts = [];
+      if (bm.length) opts.push({ label: "પઘડી · move 1 step now", act: "paghadiNow" });
+      opts.push({ label: "➕ Accumulate 9 (8 + પઘડી 1) · toss again", act: "acc9" });
+      const c = await pick(opts, "choice", who(pIdx) + ": the 8 cannot be played.");
+      if (c.act === "acc9") {
+        game.bankParts = [8, 1]; game.bank = 9;
+        log(who(pIdx) + " banked 9 step(s) (8 + પઘડી 1).");
+        const c2 = await pick(
+          [{ label: "🔁 Toss again", act: "tossAgain" }, { label: "▶ Spend 9 now", act: "spendNow" }],
+          "choice", "Bank: 9. Toss again or spend now?");
+        if (c2.act === "tossAgain") return "extra";
+        const outC = await spendPhase(pIdx);
+        if (outC === "over") return "over";
+        return EXTRA_TURN_ON_UNPLAYABLE_4_OR_8 ? "extra" : "end";
+      }
+      ashto = { bonusUsed: true, phase: null };
+      game.toss = 1;
+      bonusCtx = { extra: EXTRA_TURN_ON_UNPLAYABLE_4_OR_8, reasons: EXTRA_TURN_ON_UNPLAYABLE_4_OR_8 ? ["Ashto (8)"] : [] };
+      log(who(pIdx) + ": the 8 cannot be played, but the પઘડી step is allowed.");
+      return await playPhase(pIdx);
+    }
+    if (v === 4) {
+      const c = await pick([
+        { label: "➕ Accumulate 4 (ભેગું કરો) · toss again", act: "acc4" },
+        { label: EXTRA_TURN_ON_UNPLAYABLE_4_OR_8 ? "Pass · take extra turn" : "Pass the turn", act: "pass" }
+      ], "choice", who(pIdx) + ": the 4 cannot be played.");
+      if (c.act === "acc4") {
+        game.bankParts = [4]; game.bank = 4;
+        log(who(pIdx) + " banked 4 step(s).");
+        const c2 = await pick(
+          [{ label: "🔁 Toss again", act: "tossAgain" }, { label: "▶ Spend 4 now", act: "spendNow" }],
+          "choice", "Bank: 4. Toss again or spend now?");
+        if (c2.act === "tossAgain") return "extra";
+        const outD = await spendPhase(pIdx);
+        if (outD === "over") return "over";
+        return EXTRA_TURN_ON_UNPLAYABLE_4_OR_8 ? "extra" : "end";
+      }
+      if (EXTRA_TURN_ON_UNPLAYABLE_4_OR_8) {
+        log(who(pIdx) + " gets an extra turn — Chokko (4).");
+        return "extra";
+      }
+      return "end";
+    }
+    log(who(pIdx) + " has no legal move. Turn passes.");
+    curStatus = "No legal move for " + who(pIdx) + ". Turn passes."; pub();
+    await pause(1300);
+    return "end";
+  }
+
+  return await playPhase(pIdx);
+}
+
+/* ---------- host: full turn ---------- */
+async function hostTurn(pIdx) {
+  game.toss = null; curMoves = []; bonusCtx = null; ashto = null;
+  game.bank = 0; game.bankParts = [];
+  for (;;) {
+    curFaces = [false, false, false, false]; curLabel = "";
+    if (game.bank > 0) {
+      // accumulating: the continuation toss happens automatically, no button
+      mode = "toss"; pickBy = pIdx; curOptions = [];
+      curStatus = who(pIdx) + " is accumulating (ભેગું કરો) — tossing again...";
+      pub();
+      await pause(500);
+    } else {
+      const c = await pick([{ label: "🐚 Toss Cowries", act: "toss" }], "toss", who(pIdx) + "'s turn. Toss the cowries.");
+    }
+    const out = await tossAndPlay(pIdx);
+    if (out === "extra") continue;      // another toss (bank state is managed inside)
+    if (out === "over") return;
+    return;
+  }
+}
+
+async function hostLoop() {
+  while (!game.over) {
+    try {
+      await hostTurn(game.current);
+    } catch (e) {
+      if (e !== DECLARED) throw e;      // win declared mid-turn — fall through to game over
+      break;
+    }
+    if (game.over) break;
+    game.current = nextActivePlayer(game, game.current);
+    game.players.forEach(P => { P.graceStreak = 0; P.graceVal = null; P.graceSnap = null; });
+  }
+  mode = "over"; curOptions = []; pickBy = -1;
+  const w = game.players.slice().sort((a, b) => (a.rank || 9) - (b.rank || 9))[0];
+  curStatus = "Game over. " + who(w.idx) + " is THE WINNER!";
+  log("Game over. " + who(w.idx) + " is THE WINNER!");
+  if (!winEvtDone) evtBanner("🏆 THE WINNER!", who(w.idx), "win");   // avoid a second winner banner
+  else evtPop("રમત પૂરી! Game over.", "ok");
+  pub();
+}
+
+/* ---------- host: start ---------- */
+function startGame() {
+  room.child("players").once("value").then(snap => {
+    const lobbyPlayers = snap.val() || {};
+    const list = Object.entries(lobbyPlayers).map(([cid, name]) => ({ name: String(name).slice(0, 14), isBot: false, cid }));
+    for (let i = list.length; i < roomN; i++) list.push({ name: "Bot " + (i - list.length + 1) + String.fromCharCode(65 + i), isBot: true, cid: null });
+    game = newGameState(list.length);
+    game.players.forEach((P, i) => { P.name = list[i].name; P.cid = list[i].cid; P.isBot = list[i].isBot; });
+    logs = []; evtSeq = 0; evtObj = null; winEvtDone = false; curLegalPieces = [];
+    log("Game started (" + list.length + " players).");
+    room.update({ started: true }).then(() => hostLoop())
+      .catch(e => alert("Could not start game / રમત શરૂ કરી શકાઈ નહીં:\n" + e.message));
+  }).catch(e => alert("Could not read lobby / લોબી વાંચી શકાઈ નહીં:\n" + e.message));
+}
+
+/* =========================== CLIENT RENDERING =========================== */
+const cellEls = {}, els = new Map();
+let tossEls = [];
+
+function buildBoard() {
+  const b = $("board");
+  b.innerHTML = "";
+  GRID.forEach(row => row.forEach(id => {
+    const d = document.createElement("div");
+    d.className = "cell" + (SAFE.has(id) ? " safe" : "") + (id === CENTER ? " center" : "");
+    b.appendChild(d);
+    cellEls[id] = d;
+  }));
+}
+function buildTossBox() {
+  const box = $("tossCowries");
+  box.innerHTML = "";
+  tossEls = [0, 1, 2, 3].map(() => {
+    const d = document.createElement("div");
+    d.className = "tc closed";
+    box.appendChild(d);
+    return d;
+  });
+}
+function jit(key) {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return { a: (h % 1000) / 1000, b: ((h >> 10) % 1000) / 1000, c: ((h >> 20) % 1000) / 1000 };
+}
+
+function renderPieces() {
+  if (!S) return;
+  const layer = $("pieceLayer");
+  const cell = (layer.clientWidth || 300) / 5;
+  layer.style.setProperty("--pc", (cell * 0.34) + "px");
+  const entries = [];
+  const capKeys = new Set();
+  (S.capShow || []).forEach(c => (c.ids || []).forEach(id => capKeys.add(c.pIdx + "-" + id)));
+  S.players.forEach(P => P.pieces.forEach(pc => {
+    const pI = S.players.indexOf(P);
+    const key = pI + "-" + pc.id;
+    if (pc.state === "done" && !(S.anim && S.anim.ids.indexOf(key) >= 0)) return;
+    if (capKeys.has(key)) return;  // captured: drawn at the capture cell instead
+    let ring = pc.state === "home" ? "outer" : pc.state;
+    let pos = pc.state === "home" ? 15 : pc.pos;
+    if (S.anim && S.anim.ids.indexOf(key) >= 0) { ring = S.anim.ring; pos = S.anim.pos; }  // mid-hop
+    entries.push({ key, seat: P.seat, cell: ROUTES[P.seat][ring][pos], home: pc.state === "home" && !(S.anim && S.anim.ids.indexOf(key) >= 0) });
+  }));
+  // captured cowries stay visible on the capture cell until the mover arrives
+  (S.capShow || []).forEach(c => (c.ids || []).forEach(id => {
+    const key = c.pIdx + "-" + id;
+    if (entries.some(e => e.key === key)) return;
+    entries.push({ key, seat: S.players[c.pIdx].seat, cell: c.cell, home: false, cap: true });
+  }));
+  const groups = new Map();
+  entries.forEach(e => {
+    if (!groups.has(e.cell)) groups.set(e.cell, []);
+    groups.get(e.cell).push(e);
+  });
+  groups.forEach((arr, cellId) => {
+    const [r, c] = COORD[cellId];
+    const cx = (c + 0.5) * cell, cy = (r + 0.5) * cell;
+    const seed = (r * 5 + c) * 0.9;
+    arr.sort((a, b) => (a.key < b.key ? -1 : 1));
+    arr.forEach((e, i) => {
+      const j = jit(e.key), n = arr.length;
+      let dx, dy;
+      if (n === 1) { dx = (j.a - 0.5) * cell * 0.16; dy = (j.b - 0.5) * cell * 0.16; }
+      else {
+        const ang = (i / n) * Math.PI * 2 + j.a * 0.9 + seed;
+        const rad = cell * (0.13 + 0.07 * j.b);
+        dx = Math.cos(ang) * rad; dy = Math.sin(ang) * rad;
+      }
+      e.x = cx + dx; e.y = cy + dy; e.rot = (j.c - 0.5) * 60; e.z = e.cap ? 5 : 10 + i;
+    });
+  });
+  const seen = new Set();
+  const canPick = S.pickBy === myIdx && !S.over && (S.mode === "select" || S.mode === "spend");
+  const legalSet = new Set(canPick ? (S.legalPieces || []) : []);
+  entries.forEach(e => {
+    seen.add(e.key);
+    let el = els.get(e.key);
+    if (!el) {
+      el = document.createElement("button");
+      el.className = "cowrie p" + e.seat;
+      el.innerHTML = '<span class="sym">' + SYMS[e.seat] + "</span>";
+      layer.appendChild(el);
+      els.set(e.key, el);
+    }
+    el.style.left = e.x + "px";
+    el.style.top = e.y + "px";
+    el.style.setProperty("--rot", e.rot + "deg");
+    el.style.setProperty("--pc", (e.home ? cell * 0.27 : cell * 0.34) + "px");
+    el.style.zIndex = legalSet.has(e.key) ? 30 : e.z;
+    const legal = legalSet.has(e.key);
+    el.classList.toggle("legal", legal);
+    el.classList.toggle("celebrate", !!(S.celebIds && S.celebIds.indexOf(e.key) >= 0));
+    if (legal) {
+      const id = Number(e.key.split("-")[1]);
+      el.onclick = () => { playSnd("ok"); sendMove({ type: "pickPiece", id }); };
+    } else el.onclick = null;
+  });
+  els.forEach((el, key) => { if (!seen.has(key)) { el.remove(); els.delete(key); } });
+}
+
+function rankLabelC(r, n) {
+  if (r === 1) return "THE WINNER!";
+  if (r === n) return "Last / Lost";
+  return r === 2 ? "2nd Place" : r === 3 ? "3rd Place" : r + "th Place";
+}
+
+function render() {
+  if (!S) return;
+  // toss cowries
+  tossEls.forEach((el, i) => { el.className = "tc " + ((S.tossFaces || [])[i] ? "open" : "closed"); });
+  $("tossResult").textContent = S.tossLabel || "";
+  $("status").textContent = S.status || "";
+  $("hint").textContent = S.mode === "toss"
+    ? "4/8 = extra toss · play now or ભેગું કરો (accumulate) · each banked unit is one whole move · 8 brings the 1-step પઘડી · three same 4s or 8s in a row = બળી ગયા."
+    : (S.bank ? "Bank: " + S.bank + " (" + (S.bankParts || []).join(" + ") + ")" : "");
+
+  // action buttons
+  const box = $("chooser");
+  box.innerHTML = "";
+  const canPick = S.pickBy === myIdx && !S.over;
+  let opts = S.options || [];
+  const showBonusBtn = canPick && S.mode === "select" && S.bonusFirst;
+  const ew = S.earlyWin;
+  const canDeclare = !!(ew && !S.over && S.players[ew.w] && (myIdx === ew.w || myIdx === ew.l));
+  if (!opts.length && !showBonusBtn && !canDeclare) {
+    box.style.display = "none";
+  } else {
+    const title = document.createElement("strong");
+    title.textContent = canPick
+      ? (S.mode === "spend" ? "Choose how to spend:" : S.mode === "select" ? "Choose how to move:" : "Your action:")
+      : "Waiting for " + esc((S.players[S.pickBy] || {}).name || "...") + "...";
+    box.appendChild(title);
+    const row = document.createElement("div");
+    row.className = "controls";
+    if (showBonusBtn) {
+      const b = document.createElement("button");
+      b.className = "primary";
+      b.textContent = "⚡ પઘડી 1st (before the 8)";
+      b.addEventListener("click", () => { playSnd("ok"); sendMove({ type: "bonusFirst" }); });
+      row.appendChild(b);
+    }
+    if (canDeclare) {
+      const b = document.createElement("button");
+      b.className = "primary";
+      b.textContent = "🏆 Declare the win / વિજેતા જાહેર કરો";
+      b.addEventListener("click", () => { playSnd("ok"); sendMove({ type: "declare" }); });
+      row.appendChild(b);
+    }
+    opts.forEach((o, i) => {
+      const b = document.createElement("button");
+      b.textContent = o.label;
+      if (!canPick) b.disabled = true;
+      b.addEventListener("click", () => { playSnd("ok"); sendMove({ type: "pick", idx: i }); });
+      row.appendChild(b);
+    });
+    box.appendChild(row);
+    box.style.display = "block";
+  }
+
+  // player badges
+  const pbox = $("players");
+  pbox.innerHTML = "";
+  S.players.forEach((P, i) => {
+    const b = document.createElement("div");
+    const isCur = i === S.current && !S.over && P.rank === null;
+    b.className = "badge" + (isCur ? " current" : "") + (P.rank !== null ? " finished" : "");
+    b.style.borderColor = COLORS[P.seat];
+    const done = P.pieces.filter(p => p.state === "done").length;
+    const head = document.createElement("div");
+    head.innerHTML = '<strong style="color:' + COLORS[P.seat] + '">' + SYMS[P.seat] + " " + esc(P.name) + (P.bot ? " (Bot)" : "") + "</strong>" +
+      (i === myIdx ? " (you)" : "") +
+      (isCur ? " ◀" : "") +
+      (P.tod ? '<span class="tag">Tod Malyo</span>' : "") +
+      (P.rank !== null ? '<span class="tag rank">' + rankLabelC(P.rank, S.n) + "</span>" : "");
+    b.appendChild(head);
+    const homeRow = document.createElement("div");
+    homeRow.textContent = "At home: " + P.pieces.filter(p => p.state === "home").length;
+    b.appendChild(homeRow);
+    const d2 = document.createElement("div");
+    d2.textContent = "Reached centre: " + done + "/4";
+    b.appendChild(d2);
+    pbox.appendChild(b);
+  });
+
+  // home rings (idempotent)
+  S.players.forEach(P => {
+    const c = cellEls[ROUTES[P.seat].outer[15]];
+    if (c) { c.classList.add("homecell"); c.style.setProperty("--hc", COLORS[P.seat]); }
+  });
+
+  renderPieces();
+
+  // log
+  const lkey = JSON.stringify(S.log || []);
+  if (lkey !== lastLogKey) {
+    lastLogKey = lkey;
+    $("log").innerHTML = (S.log || []).map(l => "<div>" + l + "</div>").join("");
+  }
+
+  // event banner (transparent overlay on the board); minor notes go to the status/log only
+  if (S.evt && S.evt.id !== lastEvt) {
+    lastEvt = S.evt.id;
+    playSnd(S.evt.snd);
+    if (S.evt.t1) showBanner(S.evt.t1, S.evt.t2, S.evt.cls);
+  }
+}
+
+function showBanner(t1, t2, cls) {
+  const fx = $("fx");
+  const el = document.createElement("div");
+  el.className = "banner " + cls;
+  el.innerHTML = '<div class="b1">' + esc(t1) + '</div><div class="b2">' + esc(t2) + "</div>";
+  fx.appendChild(el);
+  if (el.animate) {
+    el.animate([
+      { transform: "translate(-50%,-50%) scale(.2) rotate(-12deg)", opacity: 0 },
+      { transform: "translate(-50%,-50%) scale(1.15) rotate(3deg)", opacity: 1, offset: 0.25 },
+      { transform: "translate(-50%,-50%) scale(1) rotate(0deg)", opacity: 1, offset: 0.8 },
+      { transform: "translate(-50%,-50%) scale(1.25)", opacity: 0 }
+    ], { duration: 1900, easing: "ease-out" });
+  }
+  setTimeout(() => el.remove(), 1900);
+}
+
+
+/* ---------- boot ---------- */
+buildBoard();
+buildTossBox();
+updateMuteBtn();
+$("createBtn").addEventListener("click", createRoom);
+$("joinBtn").addEventListener("click", joinRoom);
+$("renameBtn").addEventListener("click", renameMe);
+$("startBtn").addEventListener("click", startGame);
+$("muteBtn").addEventListener("click", () => {
+  muted = !muted;
+  try { localStorage.setItem("ashto_muted", muted ? "1" : "0"); } catch (e) {}
+  updateMuteBtn();
+});
+window.addEventListener("resize", renderPieces);
+(function initHome() {
+  const qp = new URLSearchParams(location.search).get("room");
+  show("home");
+  if (qp) $("roomCode").value = qp.toUpperCase();
+})();
+</script>
+
+</body>
+</html>
